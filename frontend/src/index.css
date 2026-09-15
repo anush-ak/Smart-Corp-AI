@@ -1,0 +1,192 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================================
+   SmartCorp AI — base layer
+   Design tokens live in tailwind.config.js. This file only holds global
+   behaviour: resets, focus treatment, scrollbars and a few composable
+   primitives that several components share.
+   ========================================================================== */
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --sc-sidebar-width: 244px;
+    --sc-sidebar-width-collapsed: 60px;
+    --sc-topbar-height: 56px;
+  }
+
+  * {
+    border-color: theme('colors.line.DEFAULT');
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-canvas font-sans text-body text-ink antialiased;
+    font-feature-settings: 'cv05' 1, 'cv11' 1, 'ss01' 1;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* One consistent focus treatment for the whole product. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-500/45 ring-offset-1 ring-offset-surface;
+  }
+
+  ::selection {
+    background-color: theme('colors.brand.100');
+    color: theme('colors.brand.900');
+  }
+
+  /* Headings inherit tracking from the type scale, not from browser defaults. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply text-ink-900;
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+    color: inherit;
+  }
+
+  input[type='search']::-webkit-search-decoration,
+  input[type='search']::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+  }
+
+  /* Numbers in tables and metrics should never jitter. */
+  table,
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  hr {
+    @apply border-line;
+  }
+
+  /* Thin, quiet scrollbars — enterprise density without visual noise. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.ink.200') transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: theme('colors.ink.200');
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background-clip: content-box;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: theme('colors.ink.300');
+    background-clip: content-box;
+  }
+}
+
+@layer components {
+  /* Surfaces --------------------------------------------------------------- */
+  .sc-card {
+    @apply rounded-lg border border-line bg-surface shadow-card;
+  }
+
+  .sc-panel {
+    @apply rounded-lg border border-line bg-surface;
+  }
+
+  .sc-inset {
+    @apply rounded-md border border-line-subtle bg-surface-muted;
+  }
+
+  /* Focus helper for custom interactive elements (rows, cards, list items). */
+  .sc-focus {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/45 focus-visible:ring-offset-1;
+  }
+
+  /* Dotted canvas used behind empty states and the upload drop zone. */
+  .sc-dotted {
+    background-image: radial-gradient(theme('colors.ink.200') 1px, transparent 1px);
+    background-size: 14px 14px;
+    background-position: -1px -1px;
+  }
+
+  /* Very light horizontal rule grid used inside dense data surfaces. */
+  .sc-divide-y > * + * {
+    @apply border-t border-line-subtle;
+  }
+
+  .kbd {
+    @apply inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-xs border border-line bg-surface-muted px-1 font-sans text-[11px] font-medium text-ink-500;
+  }
+
+  /* Long-form AI answer formatting (no chain-of-thought, statements only). */
+  .answer-body {
+    @apply text-body text-ink-800;
+  }
+  .answer-body > * + * {
+    @apply mt-3;
+  }
+  .answer-body ul,
+  .answer-body ol {
+    @apply ml-4 space-y-1.5;
+  }
+  .answer-body ul {
+    @apply list-disc;
+  }
+  .answer-body ol {
+    @apply list-decimal;
+  }
+  .answer-body strong {
+    @apply font-semibold text-ink-900;
+  }
+  .answer-body code {
+    @apply rounded-xs border border-line bg-surface-muted px-1 py-0.5 font-mono text-[12px] text-ink-700;
+  }
+  .answer-body a {
+    @apply font-medium text-brand-700 underline decoration-brand-200 underline-offset-2 hover:decoration-brand-500;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sc-grid-lines {
+    background-image: linear-gradient(to right, theme('colors.line.subtle') 1px, transparent 1px),
+      linear-gradient(to bottom, theme('colors.line.subtle') 1px, transparent 1px);
+    background-size: 100% 32px;
+  }
+}
+
+/* Respect the user's motion preference globally. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
