@@ -224,7 +224,7 @@ export function UsersPage() {
                     header: 'Role',
                     sortValue: (user) => user.role,
                     cell: (user) => (
-                      <StatusBadge tone={user.role === 'admin' ? 'brand' : 'neutral'} size="sm">
+                      <StatusBadge tone={user.role === 'admin' || user.role === 'owner' ? 'brand' : 'neutral'} size="sm">
                         {ROLE_LABELS[user.role]}
                       </StatusBadge>
                     ),
@@ -282,7 +282,7 @@ export function UsersPage() {
                       title={role.label}
                       description={role.summary}
                       actions={
-                        <StatusBadge tone={role.role === 'admin' ? 'brand' : 'neutral'} size="sm">
+                        <StatusBadge tone={role.role === 'admin' || role.role === 'owner' ? 'brand' : 'neutral'} size="sm">
                           {rows.filter((user) => user.role === role.role).length} users
                         </StatusBadge>
                       }
@@ -410,13 +410,14 @@ export function UsersPage() {
                             </p>
                           </td>
                           {(roles.data ?? []).map((role) => {
+                            const isPrivileged = role.role === 'admin' || role.role === 'owner'
                             const hasAccess =
-                              role.role === 'admin' ||
+                              isPrivileged ||
                               (base.accessLevel === 'organization' && role.role !== 'employee') ||
                               (base.accessLevel === 'organization' && role.role === 'employee') ||
                               (base.department.toLowerCase() === role.role) ||
                               (base.department === 'Engineering' && role.role === 'employee')
-                            const restricted = base.accessLevel === 'restricted' && role.role !== 'admin'
+                            const restricted = base.accessLevel === 'restricted' && !isPrivileged
                             const granted = hasAccess && !restricted
                             return (
                               <td key={role.role} className="px-3 py-3 text-center">

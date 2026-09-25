@@ -13,7 +13,7 @@
 /* Identity, roles and permissions                                            */
 /* -------------------------------------------------------------------------- */
 
-export type Role = 'admin' | 'hr' | 'finance' | 'support' | 'employee'
+export type Role = 'owner' | 'admin' | 'hr' | 'manager' | 'finance' | 'support' | 'employee'
 
 export type Permission =
   | 'overview:view'

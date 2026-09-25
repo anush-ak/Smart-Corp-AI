@@ -140,8 +140,10 @@ export function useAuth() {
 
 /** Role helper used by copy that explains scope in human language. */
 export const ROLE_LABELS: Record<Role, string> = {
+  owner: 'Owner',
   admin: 'Administrator',
   hr: 'HR',
+  manager: 'Manager',
   finance: 'Finance',
   support: 'Support',
   employee: 'Employee',

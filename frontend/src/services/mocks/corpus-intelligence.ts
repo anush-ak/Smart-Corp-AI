@@ -113,7 +113,7 @@ export const MOCK_AGENT_RUNS: AgentRun[] = [
     ],
     auditEventIds: ['aud_101', 'aud_102'],
     tokenUsage: { prompt: 3120, completion: 286 },
-    model: 'gpt-4o-mini',
+    model: 'gemini-2.5-flash',
   },
   {
     id: 'run_8842',
@@ -194,7 +194,7 @@ export const MOCK_AGENT_RUNS: AgentRun[] = [
     },
     auditEventIds: ['aud_105', 'aud_106', 'aud_107'],
     tokenUsage: { prompt: 5240, completion: 512 },
-    model: 'gpt-4o-mini',
+    model: 'gemini-2.5-flash',
   },
   {
     id: 'run_8843',
@@ -238,7 +238,7 @@ export const MOCK_AGENT_RUNS: AgentRun[] = [
     citations: [],
     auditEventIds: ['aud_110'],
     tokenUsage: { prompt: 1280, completion: 96 },
-    model: 'gpt-4o-mini',
+    model: 'gemini-2.5-flash',
   },
 ]
 
@@ -697,7 +697,7 @@ export const MOCK_AUDIT_EVENTS: AuditEvent[] = [
     id: 'aud_119', at: '2026-09-15T09:34:02Z', actorName: 'Meera Shah', actorRole: 'support', action: 'agent_executed',
     summary: 'Support Agent executed a run: “What is causing the increase in payment failures this week?”', result: 'success',
     resource: { type: 'agent_run', id: 'run_8842', label: 'Support Agent' },
-    ipAddress: '198.51.100.7', userAgent: 'Chrome 128 · Windows', requestId: 'req_a1c40e', technical: { intent: 'Support / Incident triage', confidence: 0.92, sources: 4, excluded_by_permission: 1, model: 'gpt-4o-mini' },
+    ipAddress: '198.51.100.7', userAgent: 'Chrome 128 · Windows', requestId: 'req_a1c40e', technical: { intent: 'Support / Incident triage', confidence: 0.92, sources: 4, excluded_by_permission: 1, model: 'gemini-2.5-flash' },
   },
   {
     id: 'aud_118', at: '2026-09-15T09:28:15Z', actorName: 'SmartCorp Decision Engine', actorRole: 'system', action: 'decision_generated',
@@ -733,7 +733,7 @@ export const MOCK_AUDIT_EVENTS: AuditEvent[] = [
     id: 'aud_113', at: '2026-09-15T06:10:31Z', actorName: 'Priya Raghunathan', actorRole: 'hr', action: 'document_published',
     summary: 'Published Employee Handbook — Leave Policy.pdf v4.2 to the HR knowledge base', result: 'success',
     resource: { type: 'document', id: 'doc_leave_policy', label: 'Employee Handbook — Leave Policy.pdf' },
-    ipAddress: '203.0.113.51', userAgent: 'Chrome 129 · Windows', requestId: 'req_g44cd8', technical: { version: 'v4.2', chunks_created: 218, embedding_model: 'text-embedding-3-large' },
+    ipAddress: '203.0.113.51', userAgent: 'Chrome 129 · Windows', requestId: 'req_g44cd8', technical: { version: 'v4.2', chunks_created: 218, embedding_model: 'text-embedding-004' },
   },
   {
     id: 'aud_112', at: '2026-09-14T17:22:48Z', actorName: 'Ruth Bekele', actorRole: 'employee', action: 'document_accessed',
