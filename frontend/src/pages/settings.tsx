@@ -219,8 +219,8 @@ export function SettingsPage() {
                   <DefinitionList
                     columns={1}
                     items={[
-                      { label: 'Answer model', value: <span className="font-mono text-body-sm">gpt-4o-mini</span> },
-                      { label: 'Embedding model', value: <span className="font-mono text-body-sm">text-embedding-3-large</span> },
+                      { label: 'Answer model', value: <span className="font-mono text-body-sm">gemini-2.5-flash</span> },
+                      { label: 'Embedding model', value: <span className="font-mono text-body-sm">text-embedding-004</span> },
                       { label: 'Vector store', value: <span className="font-mono text-body-sm">PostgreSQL 16 + pgvector (HNSW, cosine)</span> },
                       { label: 'Top-k', value: '8 candidates → 4 after reranking' },
                       { label: 'Chunking', value: '900 tokens with 15% overlap, section-aware' },

@@ -55,11 +55,11 @@ function currentUser(): User {
 }
 
 function mayReadBase(user: User, base: KnowledgeBase) {
-  return user.role === 'admin' || user.knowledgeScope.includes(base.id)
+  return user.role === 'admin' || user.role === 'owner' || user.knowledgeScope.includes(base.id)
 }
 
 function mayReadDocument(user: User, document: KnowledgeDocument) {
-  if (user.role === 'admin') return true
+  if (user.role === 'admin' || user.role === 'owner') return true
   if (!user.knowledgeScope.includes(document.knowledgeBaseId)) return false
   if (document.accessLevel === 'organization') return true
   if (document.accessLevel === 'restricted') return false
@@ -234,7 +234,7 @@ registerMocks([
         accessLevel: body.accessLevel,
         status: 'indexing',
         ownerName: 'Anush Kannan',
-        embeddingModel: 'text-embedding-3-large',
+        embeddingModel: 'text-embedding-004',
         retrievalQuality: null,
         agents: [],
       }
