@@ -5,7 +5,9 @@ Branch: `arena/01a0e3e2-smart-corp-ai`
 
 ## Release decision
 
-**NOT PRODUCTION READY**
+**BLOCKED**
+
+This final validation phase added and verified a Playwright production smoke harness, but Render deployment, browser execution, live PostgreSQL/Redis/Google integration, and production HTTPS validation remain inaccessible in this environment.
 
 The local implementation is test-stable, but required production infrastructure validation was not possible. This is an evidence-based release gate decision, not a test pass-rate decision.
 

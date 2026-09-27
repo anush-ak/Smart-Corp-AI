@@ -2,7 +2,7 @@
 
 ## Scope
 
-The repository contains Vitest + Testing Library UI integration tests, not Playwright. A browser-level suite against a running integrated deployment could not be honestly executed because no Render URL was available and the project has no Playwright configuration.
+The repository now contains both Vitest + Testing Library UI integration tests and a Playwright production smoke suite. A browser-level suite against a running integrated deployment could not be honestly executed because no Render URL, credentials, or Chromium binary were available.
 
 ## Executed application-level journeys
 
