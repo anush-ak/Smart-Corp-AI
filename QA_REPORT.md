@@ -8,8 +8,8 @@ Branch: `arena/01a0e3e2-smart-corp-ai`
 
 | Metric | Result |
 |---|---:|
-| Automated tests executed | 119 |
-| Passed | 119 |
+| Automated tests executed | 122 |
+| Passed | 122 |
 | Failed | 0 |
 | Blocked | 3 integration areas |
 | Automated pass rate | 100% |
@@ -40,7 +40,7 @@ The implemented frontend and backend test suites pass. This is not a claim that 
 
 - `cd frontend && npm test -- --run`: **47 passed**, 2 files.
 - `cd frontend && npm run build`: **passed** (`tsc -b && vite build`).
-- `cd backend && .venv/bin/pytest -q`: **72 passed**, 64 warnings (including 13 new strict contract/failure-mode tests).
+- `cd backend && .venv/bin/pytest -q`: **75 passed**, 64 warnings (including strict contract/failure-mode and Google boundary tests).
 - `cd frontend && npm run lint`: completed with **0 errors and 29 warnings**.
 - `cd backend && .venv/bin/python manage.py check --deploy`: completed with **22 warnings**, no fatal errors.
 
