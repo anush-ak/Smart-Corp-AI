@@ -6,8 +6,9 @@
 |---|---|---:|
 | Frontend route coverage | `frontend/src/test/routes.test.tsx` | 21/21 passed |
 | Frontend UI/workflow tests | `frontend/src/test/app.test.tsx` | 26/26 passed |
-| Backend auth/API | `backend/tests/test_auth.py` | Included in 59 passed |
-| Organizations/relationships | `backend/tests/test_organizations.py` | Included in 59 passed |
+| Backend auth/API | `backend/tests/test_auth.py` | Included in 72 passed |
+| Strict API contracts/failure modes | `backend/tests/test_smoke_contracts.py` | 13/13 passed |
+| Organizations/relationships | `backend/tests/test_organizations.py` | Included in 72 passed |
 | RBAC/authorization | `backend/tests/test_rbac.py` | Included in 59 passed |
 | Tenant isolation | `backend/tests/test_tenant_isolation.py` | Included in 59 passed |
 | Django deployment checks | `manage.py check --deploy` | Completed with 22 warnings |
