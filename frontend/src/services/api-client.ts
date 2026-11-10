@@ -17,13 +17,22 @@ import axios, { AxiosError, type AxiosInstance, type InternalAxiosRequestConfig 
  *                       endpoint exists. Set to `false` to hit the live API.
  */
 
-const configuredApiUrl = import.meta.env.VITE_API_BASE_URL ?? '/api'
-// Render injects the backend service host (for example, https://smartcorp-api.onrender.com)
+export function resolveApiBaseUrl(rawUrl?: string): string {
+  const trimmed = (rawUrl ?? '').trim()
+  if (!trimmed) return '/api'
+
+  const isRelativePath = trimmed.startsWith('/') && !trimmed.startsWith('//')
+  const hasExplicitScheme = /^https?:\/\//i.test(trimmed)
+  const withScheme = isRelativePath || hasExplicitScheme ? trimmed : `https://${trimmed.replace(/^\/+/, '')}`
+
+  if (withScheme === '/') return '/api'
+  const clean = withScheme.replace(/\/+$/, '')
+  return clean.endsWith('/api') ? clean : `${clean}/api`
+}
+
+// Render injects the backend URL via RENDER_EXTERNAL_URL (or a bare hostname),
 // while local development uses the Vite-relative /api proxy.
-export const API_BASE_URL =
-  configuredApiUrl === '/api' || configuredApiUrl.endsWith('/api')
-    ? configuredApiUrl
-    : `${configuredApiUrl.replace(/\/$/, '')}/api`
+export const API_BASE_URL = resolveApiBaseUrl(import.meta.env.VITE_API_BASE_URL)
 export const USE_MOCK_API = (import.meta.env.VITE_USE_MOCK_API ?? 'true') !== 'false'
 
 export const AUTH_TOKEN_KEY = 'smartcorp.auth.token'

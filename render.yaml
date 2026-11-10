@@ -4,12 +4,15 @@ services:
   - type: web
     name: smartcorp-api
     runtime: python
+    plan: free
     rootDir: backend
-    buildCommand: pip install -r requirements.txt && python manage.py migrate --noinput && python manage.py collectstatic --noinput
-    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 3
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
+    startCommand: python manage.py migrate_safe && gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 3
     healthCheckPath: /health/
-    autoDeploy: true
+    autoDeployTrigger: commit
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.13.5"
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings.production
       - key: DJANGO_SECRET_KEY
@@ -47,16 +50,19 @@ services:
     name: smartcorp-web
     runtime: static
     rootDir: frontend
-    buildCommand: npm ci && npm run build
+    buildCommand: npm ci --include=dev && npm run build
     staticPublishPath: dist
+    autoDeployTrigger: commit
     envVars:
+      - key: NODE_VERSION
+        value: "24.22.1"
       - key: VITE_USE_MOCK_API
         value: "false"
       - key: VITE_API_BASE_URL
         fromService:
           type: web
           name: smartcorp-api
-          property: host
+          envVarKey: RENDER_EXTERNAL_URL
     routes:
       - type: rewrite
         source: /*
