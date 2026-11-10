@@ -1,0 +1,69 @@
+# Render Blueprint for SmartCorp AI.
+# Create the services with "New > Blueprint" and select this repository.
+services:
+  - type: web
+    name: smartcorp-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt && python manage.py migrate --noinput && python manage.py collectstatic --noinput
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 3
+    healthCheckPath: /health/
+    autoDeploy: true
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_ALLOWED_HOSTS
+        value: smartcorp-api.onrender.com
+      - key: DATABASE_URL
+        fromDatabase:
+          name: smartcorp-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: smartcorp-redis
+          property: connectionString
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://smartcorp-web.onrender.com
+      - key: CSRF_TRUSTED_ORIGINS
+        value: https://smartcorp-web.onrender.com
+      - key: FRONTEND_URL
+        value: https://smartcorp-web.onrender.com
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: ENABLE_API_DOCS
+        value: "False"
+      - key: GOOGLE_API_KEY
+        sync: false
+
+  - type: keyvalue
+    name: smartcorp-redis
+    plan: free
+    ipAllowList: []
+
+  - type: web
+    name: smartcorp-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_USE_MOCK_API
+        value: "false"
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: smartcorp-api
+          property: host
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+databases:
+  - name: smartcorp-db
+    plan: free
+    databaseName: smartcorp
+    user: smartcorp
