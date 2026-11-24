@@ -26,6 +26,10 @@ def get_password_hash(password: str) -> str:
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
+hash_password = get_password_hash
+
+
+
 def create_access_token(
     user_id: int,
     org_id: int,

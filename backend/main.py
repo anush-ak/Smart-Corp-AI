@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 
 from backend.config import ALLOWED_ORIGINS
-from backend.database import SessionLocal, get_db
+from backend.database import SessionLocal, get_db, Base, engine
 from backend.models import User, Organization, Project, Task, AuditEvent, Document
 from backend.auth import verify_password, create_access_token, get_current_user, require_roles
 from backend.rag_service import ingest_pdf, ask_knowledge_base, get_indexed_documents_count
@@ -339,14 +339,31 @@ def get_audit_events(
 
 @app.on_event("startup")
 def on_startup():
-    # 1. Automatically seed/update Acme Corp users (Anush, Sidharth, Nicholas, Hitesh) with password123 on startup
+    # 1. Ensure all database tables exist
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("Base.metadata.create_all executed successfully.")
+    except Exception as ddl_err:
+        print(f"Base.metadata.create_all notice: {ddl_err}")
+
+    # 2. Automatically seed/update Acme Corp users (Anush, Sidharth, Nicholas, Hitesh) with password123 on startup
     try:
         from backend.seed import seed_database
         seed_database()
     except Exception as seed_err:
         print(f"Startup database seeding error: {seed_err}")
 
-    # 2. Check if ChromaDB collection is empty for Org 1; if so, auto-ingest demo documents
+    # 3. Print active users in database for Render logs
+    try:
+        db = SessionLocal()
+        try:
+            print("ACTIVE USERS IN DB:", [u.email for u in db.query(User).all()])
+        finally:
+            db.close()
+    except Exception as user_log_err:
+        print(f"Startup active users query error: {user_log_err}")
+
+    # 4. Check if ChromaDB collection is empty for Org 1; if so, auto-ingest demo documents
     try:
         count = get_indexed_documents_count(org_id=1)
         demo_dir = os.path.join(os.path.dirname(__file__), "demo_docs")
