@@ -1,5 +1,6 @@
 import os
 import shutil
+import traceback
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from fastapi import (
@@ -12,7 +13,9 @@ from fastapi import (
     Form,
     WebSocket,
     WebSocketDisconnect,
+    Request,
 )
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -45,6 +48,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    if isinstance(exc, HTTPException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
+            headers=getattr(exc, "headers", None),
+        )
+    traceback.print_exc()
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)},
+    )
 
 
 # Schemas

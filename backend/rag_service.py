@@ -26,11 +26,12 @@ collection = chroma_client.get_or_create_collection(
 )
 
 # Configure Gemini API if key is present with REST transport for strict timeout compliance
-if GEMINI_API_KEY:
+active_gemini_key = os.getenv("GEMINI_API_KEY") or GEMINI_API_KEY
+if active_gemini_key:
     try:
-        genai.configure(api_key=GEMINI_API_KEY, transport="rest")
+        genai.configure(api_key=active_gemini_key, transport="rest")
     except Exception:
-        genai.configure(api_key=GEMINI_API_KEY)
+        genai.configure(api_key=active_gemini_key)
 
 
 def ingest_pdf(file_path: str, filename: str, org_id: int) -> int:
@@ -202,25 +203,45 @@ def ask_knowledge_base(question: str, org_id: int) -> Dict[str, Any]:
         "Grounded Answer:"
     )
 
-    # Call gemini-2.5-flash with fast timeout, falling back gracefully if unavailable
+    # Call gemini-2.5-flash (or gemini-2.0-flash) with fast timeout, falling back gracefully if unavailable
     answer_text = None
+    active_gemini_key = os.getenv("GEMINI_API_KEY") or GEMINI_API_KEY
 
-    if GEMINI_API_KEY:
+    if active_gemini_key:
         try:
-            model = genai.GenerativeModel("gemini-2.5-flash")
-            response = model.generate_content(
-                system_prompt,
-                generation_config=genai.types.GenerationConfig(
-                    temperature=0.1,
-                    max_output_tokens=800,
-                ),
-                request_options={"timeout": 6},
-            )
-            if response and response.text:
-                answer_text = response.text.strip()
+            try:
+                genai.configure(api_key=active_gemini_key, transport="rest")
+            except Exception:
+                genai.configure(api_key=active_gemini_key)
+
+            try:
+                model = genai.GenerativeModel("gemini-2.5-flash")
+                response = model.generate_content(
+                    system_prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        temperature=0.1,
+                        max_output_tokens=800,
+                    ),
+                    request_options={"timeout": 6},
+                )
+                if response and response.text:
+                    answer_text = response.text.strip()
+            except Exception as e_25:
+                print(f"Gemini gemini-2.5-flash unavailable ({e_25}), trying gemini-2.0-flash...")
+                model = genai.GenerativeModel("gemini-2.0-flash")
+                response = model.generate_content(
+                    system_prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        temperature=0.1,
+                        max_output_tokens=800,
+                    ),
+                    request_options={"timeout": 6},
+                )
+                if response and response.text:
+                    answer_text = response.text.strip()
         except Exception as e:
-            # If 404 or high demand, fallback gracefully
-            print(f"Gemini gemini-2.5-flash response unavailable: {e}")
+            # If unavailable, fallback gracefully
+            print(f"Gemini response unavailable: {e}")
 
     if not answer_text:
         # Fallback to deterministic grounded answer
