@@ -1,0 +1,501 @@
+import sys
+import os
+from datetime import datetime, timedelta, timezone
+
+# Ensure parent directory is in sys.path so backend imports work directly
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from backend.database import engine, SessionLocal, Base
+from backend.models import Organization, User, Project, Task, Document, AuditEvent
+from backend.auth import get_password_hash
+
+
+def seed_database():
+    print("Seeding database in Neon PostgreSQL...")
+    # Tables are already created in Neon; create_all hangs on transaction pooler
+    db = SessionLocal()
+    default_password = "password123"
+    hashed_pwd = get_password_hash(default_password)
+    now = datetime.now(timezone.utc)
+
+    try:
+        # -------------------------------------------------------------
+        # Organization 1: Acme Corp
+        # -------------------------------------------------------------
+        acme_org = db.query(Organization).filter(Organization.slug == "acme-corp").first()
+        if not acme_org:
+            acme_org = Organization(name="Acme Corp", slug="acme-corp")
+            db.add(acme_org)
+            db.commit()
+            db.refresh(acme_org)
+            print(f"Created organization: {acme_org.name} (id={acme_org.id})")
+        else:
+            print(f"Found existing organization: {acme_org.name} (id={acme_org.id})")
+
+        # Acme Users
+        acme_users_data = [
+            {"email": "admin@acmecorp.com", "name": "Sarah Chen", "role": "Admin", "department": "Executive"},
+            {"email": "manager@acmecorp.com", "name": "Alex Rivera", "role": "Manager", "department": "Product"},
+            {"email": "hr@acmecorp.com", "name": "Elena Rostova", "role": "HR", "department": "People Ops"},
+            {"email": "employee@acmecorp.com", "name": "David Kim", "role": "Employee", "department": "Engineering"},
+        ]
+
+        acme_users = {}
+        for u_data in acme_users_data:
+            user = db.query(User).filter(User.email == u_data["email"]).first()
+            if not user:
+                user = User(
+                    org_id=acme_org.id,
+                    email=u_data["email"],
+                    name=u_data["name"],
+                    role=u_data["role"],
+                    department=u_data["department"],
+                    hashed_password=hashed_pwd,
+                    is_active=True,
+                )
+                db.add(user)
+                db.commit()
+                db.refresh(user)
+                print(f"  Created user: {user.name} ({user.role}) <{user.email}>")
+            else:
+                user.org_id = acme_org.id
+                user.name = u_data["name"]
+                user.role = u_data["role"]
+                user.department = u_data["department"]
+                user.hashed_password = hashed_pwd
+                user.is_active = True
+                db.commit()
+                db.refresh(user)
+                print(f"  Updated existing user: {user.name} ({user.role})")
+            acme_users[user.email] = user
+
+        # Acme Projects
+        acme_projects_data = [
+            {"name": "Enterprise Migration v2", "description": "Migrate core microservices and auth infrastructure.", "status": "In Progress"},
+            {"name": "SOC-2 Type II Compliance", "description": "Preparation and evidence collection for annual audit.", "status": "In Progress"},
+        ]
+        acme_projects = {}
+        for p_data in acme_projects_data:
+            proj = db.query(Project).filter(Project.org_id == acme_org.id, Project.name == p_data["name"]).first()
+            if not proj:
+                proj = Project(
+                    org_id=acme_org.id,
+                    name=p_data["name"],
+                    description=p_data["description"],
+                    status=p_data["status"],
+                )
+                db.add(proj)
+                db.commit()
+                db.refresh(proj)
+                print(f"  Created project: {proj.name}")
+            else:
+                proj.status = p_data["status"]
+                proj.description = p_data["description"]
+                db.commit()
+                db.refresh(proj)
+            acme_projects[proj.name] = proj
+
+        # Acme Tasks:
+        # David Kim: 38.0h non-completed (12 + 14 + 6 + 6) -> OVERLOADED (near/over 36h), 1 Overdue task!
+        # Alex Rivera: 12.0h non-completed (8 + 4) -> UNDER-UTILIZED (~12h)
+        # Sarah Chen: 22.0h non-completed (16 + 6) -> Pending Approval tasks
+        # Elena Rostova: 8.0h non-completed (8) -> Todo
+        # Completed tasks: 3
+        # Overdue tasks: 1 (David Kim CVE task, due yesterday)
+        # Pending approvals: 2
+        acme_tasks_data = [
+            # David Kim's tasks (Total: 38h non-completed + 6h completed)
+            {
+                "title": "Implement RBAC middleware for multi-tenant isolation",
+                "project": "Enterprise Migration v2",
+                "assignee": "employee@acmecorp.com",
+                "status": "In Progress",
+                "priority": "Urgent",
+                "hours": 12.0,
+                "due": now + timedelta(days=2),
+            },
+            {
+                "title": "Optimize vector embedding ChromaDB retrieval pipeline",
+                "project": "Enterprise Migration v2",
+                "assignee": "employee@acmecorp.com",
+                "status": "In Progress",
+                "priority": "High",
+                "hours": 14.0,
+                "due": now + timedelta(days=3),
+            },
+            {
+                "title": "Audit serverless database connection pool",
+                "project": "Enterprise Migration v2",
+                "assignee": "employee@acmecorp.com",
+                "status": "Todo",
+                "priority": "High",
+                "hours": 6.0,
+                "due": now + timedelta(days=5),
+            },
+            {
+                "title": "Resolve CVE vulnerability in Python dependencies",
+                "project": "Enterprise Migration v2",
+                "assignee": "employee@acmecorp.com",
+                "status": "In Progress",
+                "priority": "Urgent",
+                "hours": 6.0,
+                "due": now - timedelta(days=1),  # Overdue!
+            },
+            {
+                "title": "Initial database schema & Neon migration",
+                "project": "Enterprise Migration v2",
+                "assignee": "employee@acmecorp.com",
+                "status": "Done",
+                "priority": "Medium",
+                "hours": 6.0,
+                "due": now - timedelta(days=4),
+            },
+
+            # Alex Rivera's tasks (Total: 12h non-completed + 4h completed)
+            {
+                "title": "Migrate legacy authentication to JWT tokens",
+                "project": "Enterprise Migration v2",
+                "assignee": "manager@acmecorp.com",
+                "status": "In Progress",
+                "priority": "High",
+                "hours": 8.0,
+                "due": now + timedelta(days=3),
+            },
+            {
+                "title": "API gateway rate limiting and caching spec",
+                "project": "Enterprise Migration v2",
+                "assignee": "manager@acmecorp.com",
+                "status": "Todo",
+                "priority": "Medium",
+                "hours": 4.0,
+                "due": now + timedelta(days=6),
+            },
+            {
+                "title": "Vite + Tailwind frontend shell setup",
+                "project": "Enterprise Migration v2",
+                "assignee": "manager@acmecorp.com",
+                "status": "Done",
+                "priority": "Medium",
+                "hours": 4.0,
+                "due": now - timedelta(days=5),
+            },
+
+            # Sarah Chen's tasks (Total: 22h Pending Approval)
+            {
+                "title": "Quarterly security compliance review",
+                "project": "SOC-2 Type II Compliance",
+                "assignee": "admin@acmecorp.com",
+                "status": "Pending Approval",
+                "priority": "High",
+                "hours": 16.0,
+                "due": now + timedelta(days=7),
+            },
+            {
+                "title": "SOC-2 Type II audit readiness evidence checklist",
+                "project": "SOC-2 Type II Compliance",
+                "assignee": "admin@acmecorp.com",
+                "status": "Pending Approval",
+                "priority": "High",
+                "hours": 6.0,
+                "due": now + timedelta(days=4),
+            },
+
+            # Elena Rostova's tasks (Total: 8h Todo + 4h Done)
+            {
+                "title": "Staffing roadmap & technical hiring pipeline",
+                "project": "Enterprise Migration v2",
+                "assignee": "hr@acmecorp.com",
+                "status": "Todo",
+                "priority": "Medium",
+                "hours": 8.0,
+                "due": now + timedelta(days=5),
+            },
+            {
+                "title": "Prepare employee onboarding handbook & security policy",
+                "project": "SOC-2 Type II Compliance",
+                "assignee": "hr@acmecorp.com",
+                "status": "Done",
+                "priority": "Medium",
+                "hours": 4.0,
+                "due": now - timedelta(days=2),
+            },
+        ]
+
+        for t_data in acme_tasks_data:
+            task = db.query(Task).filter(Task.org_id == acme_org.id, Task.title == t_data["title"]).first()
+            if not task:
+                task = Task(
+                    org_id=acme_org.id,
+                    project_id=acme_projects[t_data["project"]].id,
+                    assignee_id=acme_users[t_data["assignee"]].id,
+                    title=t_data["title"],
+                    status=t_data["status"],
+                    priority=t_data["priority"],
+                    estimated_hours=t_data["hours"],
+                    due_date=t_data["due"],
+                )
+                db.add(task)
+                db.commit()
+                print(f"  Created task: {task.title}")
+            else:
+                task.status = t_data["status"]
+                task.priority = t_data["priority"]
+                task.estimated_hours = t_data["hours"]
+                task.due_date = t_data["due"]
+                task.assignee_id = acme_users[t_data["assignee"]].id
+                db.commit()
+                print(f"  Updated task: {task.title} ({task.status}, {task.estimated_hours}h)")
+
+        # Acme Audit Events
+        # Ensure we have rich chronological events
+        existing_events = db.query(AuditEvent).filter(AuditEvent.org_id == acme_org.id).count()
+        if existing_events < 5:
+            events = [
+                AuditEvent(
+                    org_id=acme_org.id,
+                    user_id=acme_users["admin@acmecorp.com"].id,
+                    user_name="Sarah Chen",
+                    action="ORGANIZATION_INITIALIZED",
+                    resource_type="system",
+                    resource_id=str(acme_org.id),
+                    details="Acme Corp organization workspace established with Neon PostgreSQL isolation.",
+                    timestamp=now - timedelta(days=3),
+                ),
+                AuditEvent(
+                    org_id=acme_org.id,
+                    user_id=acme_users["admin@acmecorp.com"].id,
+                    user_name="Sarah Chen",
+                    action="USER_INVITED",
+                    resource_type="user",
+                    resource_id=str(acme_users["manager@acmecorp.com"].id),
+                    details="Invited Alex Rivera with role Manager.",
+                    timestamp=now - timedelta(days=2, hours=18),
+                ),
+                AuditEvent(
+                    org_id=acme_org.id,
+                    user_id=acme_users["manager@acmecorp.com"].id,
+                    user_name="Alex Rivera",
+                    action="PROJECT_CREATED",
+                    resource_type="project",
+                    resource_id=str(acme_projects["Enterprise Migration v2"].id),
+                    details="Created Enterprise Migration v2 project and milestones.",
+                    timestamp=now - timedelta(days=2, hours=6),
+                ),
+                AuditEvent(
+                    org_id=acme_org.id,
+                    user_id=acme_users["employee@acmecorp.com"].id,
+                    user_name="David Kim",
+                    action="TASK_STARTED",
+                    resource_type="task",
+                    resource_id="101",
+                    details="Started work on 'Implement RBAC middleware for multi-tenant isolation'.",
+                    timestamp=now - timedelta(hours=4),
+                ),
+                AuditEvent(
+                    org_id=acme_org.id,
+                    user_id=acme_users["admin@acmecorp.com"].id,
+                    user_name="Sarah Chen",
+                    action="WORKLOAD_AUDITED",
+                    resource_type="analytics",
+                    resource_id="tower",
+                    details="Control tower executive analytics snapshot generated.",
+                    timestamp=now - timedelta(minutes=15),
+                ),
+            ]
+            db.add_all(events)
+            db.commit()
+            print("  Created audit events for Acme Corp")
+
+        # -------------------------------------------------------------
+        # Organization 2: Globex Labs
+        # -------------------------------------------------------------
+        globex_org = db.query(Organization).filter(Organization.slug == "globex-labs").first()
+        if not globex_org:
+            globex_org = Organization(name="Globex Labs", slug="globex-labs")
+            db.add(globex_org)
+            db.commit()
+            db.refresh(globex_org)
+            print(f"\nCreated organization: {globex_org.name} (id={globex_org.id})")
+        else:
+            print(f"\nFound existing organization: {globex_org.name} (id={globex_org.id})")
+
+        # Globex Users
+        globex_users_data = [
+            {"email": "admin@globex.com", "name": "Marcus Vance", "role": "Admin", "department": "Executive"},
+            {"email": "manager@globex.com", "name": "Jessica Lee", "role": "Manager", "department": "R&D"},
+            {"email": "hr@globex.com", "name": "Sonia Patel", "role": "HR", "department": "Operations"},
+            {"email": "employee@globex.com", "name": "Liam Johnson", "role": "Employee", "department": "Platform"},
+        ]
+
+        globex_users = {}
+        for u_data in globex_users_data:
+            user = db.query(User).filter(User.email == u_data["email"]).first()
+            if not user:
+                user = User(
+                    org_id=globex_org.id,
+                    email=u_data["email"],
+                    name=u_data["name"],
+                    role=u_data["role"],
+                    department=u_data["department"],
+                    hashed_password=hashed_pwd,
+                    is_active=True,
+                )
+                db.add(user)
+                db.commit()
+                db.refresh(user)
+                print(f"  Created user: {user.name} ({user.role}) <{user.email}>")
+            else:
+                user.org_id = globex_org.id
+                user.name = u_data["name"]
+                user.role = u_data["role"]
+                user.department = u_data["department"]
+                user.hashed_password = hashed_pwd
+                user.is_active = True
+                db.commit()
+                db.refresh(user)
+                print(f"  Updated existing user: {user.name} ({user.role})")
+            globex_users[user.email] = user
+
+        # Globex Projects
+        globex_projects_data = [
+            {"name": "NextGen Autonomous Sensor Pipeline", "description": "High-throughput telemetry ingestion network.", "status": "In Progress"},
+            {"name": "Developer Experience Platform", "description": "Internal developer portal & CI/CD automations.", "status": "In Progress"},
+        ]
+        globex_projects = {}
+        for p_data in globex_projects_data:
+            proj = db.query(Project).filter(Project.org_id == globex_org.id, Project.name == p_data["name"]).first()
+            if not proj:
+                proj = Project(
+                    org_id=globex_org.id,
+                    name=p_data["name"],
+                    description=p_data["description"],
+                    status=p_data["status"],
+                )
+                db.add(proj)
+                db.commit()
+                db.refresh(proj)
+                print(f"  Created project: {proj.name}")
+            else:
+                proj.status = p_data["status"]
+                proj.description = p_data["description"]
+                db.commit()
+                db.refresh(proj)
+            globex_projects[proj.name] = proj
+
+        # Globex Tasks:
+        # Liam Johnson: 38.0h non-completed (14 + 18 + 6) -> Overloaded
+        # Jessica Lee: 12.0h non-completed (8 + 4) -> Under-utilized
+        # Marcus Vance: 14.0h non-completed (14 Pending Approval)
+        # Sonia Patel: 8.0h non-completed (8 Todo)
+        globex_tasks_data = [
+            {
+                "title": "Calibrate telemetry ingestion pipeline",
+                "project": "NextGen Autonomous Sensor Pipeline",
+                "assignee": "employee@globex.com",
+                "status": "In Progress",
+                "priority": "Urgent",
+                "hours": 14.0,
+                "due": now + timedelta(days=2),
+            },
+            {
+                "title": "Provision multi-region Kubernetes cluster",
+                "project": "Developer Experience Platform",
+                "assignee": "employee@globex.com",
+                "status": "In Progress",
+                "priority": "Urgent",
+                "hours": 18.0,
+                "due": now + timedelta(days=1),
+            },
+            {
+                "title": "Patch telemetry streaming buffer memory leak",
+                "project": "NextGen Autonomous Sensor Pipeline",
+                "assignee": "employee@globex.com",
+                "status": "Todo",
+                "priority": "High",
+                "hours": 6.0,
+                "due": now - timedelta(days=1),  # Overdue!
+            },
+            {
+                "title": "Review edge sensor latency benchmarks",
+                "project": "NextGen Autonomous Sensor Pipeline",
+                "assignee": "manager@globex.com",
+                "status": "In Progress",
+                "priority": "High",
+                "hours": 8.0,
+                "due": now + timedelta(days=4),
+            },
+            {
+                "title": "Draft internal CI/CD observability guidelines",
+                "project": "Developer Experience Platform",
+                "assignee": "manager@globex.com",
+                "status": "Todo",
+                "priority": "Medium",
+                "hours": 4.0,
+                "due": now + timedelta(days=6),
+            },
+            {
+                "title": "Q3 Infrastructure architectural review",
+                "project": "NextGen Autonomous Sensor Pipeline",
+                "assignee": "admin@globex.com",
+                "status": "Pending Approval",
+                "priority": "High",
+                "hours": 14.0,
+                "due": now + timedelta(days=5),
+            },
+            {
+                "title": "Coordinate platform engineering recruitment pipeline",
+                "project": "Developer Experience Platform",
+                "assignee": "hr@globex.com",
+                "status": "Todo",
+                "priority": "Low",
+                "hours": 8.0,
+                "due": now + timedelta(days=3),
+            },
+            {
+                "title": "Update remote work and equipment stipend guide",
+                "project": "Developer Experience Platform",
+                "assignee": "hr@globex.com",
+                "status": "Done",
+                "priority": "Low",
+                "hours": 5.0,
+                "due": now - timedelta(days=3),
+            },
+        ]
+
+        for t_data in globex_tasks_data:
+            task = db.query(Task).filter(Task.org_id == globex_org.id, Task.title == t_data["title"]).first()
+            if not task:
+                task = Task(
+                    org_id=globex_org.id,
+                    project_id=globex_projects[t_data["project"]].id,
+                    assignee_id=globex_users[t_data["assignee"]].id,
+                    title=t_data["title"],
+                    status=t_data["status"],
+                    priority=t_data["priority"],
+                    estimated_hours=t_data["hours"],
+                    due_date=t_data["due"],
+                )
+                db.add(task)
+                db.commit()
+                print(f"  Created task: {task.title}")
+            else:
+                task.status = t_data["status"]
+                task.priority = t_data["priority"]
+                task.estimated_hours = t_data["hours"]
+                task.due_date = t_data["due"]
+                task.assignee_id = globex_users[t_data["assignee"]].id
+                db.commit()
+                print(f"  Updated task: {task.title} ({task.status}, {task.estimated_hours}h)")
+
+        print("\nSeed completed successfully! Workloads and metrics calibrated.")
+
+    except Exception as e:
+        db.rollback()
+        print(f"Error during seeding: {e}")
+        raise e
+    finally:
+        db.close()
+
+
+if __name__ == "__main__":
+    seed_database()
