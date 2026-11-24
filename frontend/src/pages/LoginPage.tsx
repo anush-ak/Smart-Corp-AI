@@ -18,33 +18,33 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
   // Acme Corp
   {
     org: 'Acme Corp',
-    name: 'Sarah Chen',
+    name: 'Anush',
     role: 'Admin',
-    email: 'admin@acmecorp.com',
+    email: 'anush@acmecorp.com',
     password: 'password123',
     department: 'Executive',
   },
   {
     org: 'Acme Corp',
-    name: 'Alex Rivera',
-    role: 'Manager',
-    email: 'manager@acmecorp.com',
-    password: 'password123',
-    department: 'Product',
-  },
-  {
-    org: 'Acme Corp',
-    name: 'Elena Rostova',
+    name: 'Sidharth',
     role: 'HR',
-    email: 'hr@acmecorp.com',
+    email: 'sidharth@acmecorp.com',
     password: 'password123',
     department: 'People Ops',
   },
   {
     org: 'Acme Corp',
-    name: 'David Kim',
+    name: 'Nicholas',
+    role: 'Manager',
+    email: 'nicholas@acmecorp.com',
+    password: 'password123',
+    department: 'Product',
+  },
+  {
+    org: 'Acme Corp',
+    name: 'Hitesh',
     role: 'Employee',
-    email: 'employee@acmecorp.com',
+    email: 'hitesh@acmecorp.com',
     password: 'password123',
     department: 'Engineering',
   },
@@ -95,7 +95,7 @@ export const LoginPage: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState('admin@acmecorp.com');
+  const [email, setEmail] = useState('anush@acmecorp.com');
   const [password, setPassword] = useState('password123');
   const [selectedOrg, setSelectedOrg] = useState<'Acme Corp' | 'Globex Labs'>('Acme Corp');
   const [isSubmitting, setIsSubmitting] = useState(false);

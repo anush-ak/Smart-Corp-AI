@@ -22,28 +22,28 @@ import { DraftTask } from '../types';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const SAMPLE_MEETING_NOTES = `Sprint Planning & Operations Sync — Q4 Deliverables
-Date: Nov 24, 2026 | Attendees: Sarah Chen (Admin), Alex Rivera (Manager), Elena Rostova (HR), David Kim (Employee)
+Date: Nov 24, 2026 | Attendees: Anush (Admin), Nicholas (Manager), Sidharth (HR), Hitesh (Employee)
 
 Key Discussion Points & Decisions:
 1. Enterprise Migration v2:
-   - David Kim to complete PostgreSQL connection pooling and load-test async session pool by Friday (2026-11-28). Estimated 12 hours of deep work.
-   - Alex Rivera will review and merge David's microservice auth PR tomorrow. Needs 4 hours.
+   - Hitesh to complete PostgreSQL connection pooling and load-test async session pool by Friday (2026-11-28). Estimated 12 hours of deep work.
+   - Nicholas will review and merge Hitesh's microservice auth PR tomorrow. Needs 4 hours.
 
 2. SOC-2 Type II Compliance Evidence:
-   - Sarah Chen to finalize vendor risk assessments and sign off on external security audit policies by end of month (2026-11-30). Est 6 hours.
+   - Anush to finalize vendor risk assessments and sign off on external security audit policies by end of month (2026-11-30). Est 6 hours.
    - We need someone to perform IAM access control audit and revoke inactive test accounts. High priority, est 8 hours, no specific owner assigned yet.
 
 3. People Ops & Workplace Policies:
-   - Elena Rostova will update the Remote Work equipment stipend guidelines in the employee handbook by next Monday. Est 4 hours.
+   - Sidharth will update the Remote Work equipment stipend guidelines in the employee handbook by next Monday. Est 4 hours.
    - Action item: Draft quarterly engineering performance review schedule. Est 3 hours, due date pending HR leadership approval.
 `;
 
 const AVAILABLE_ASSIGNEES = [
   'Unassigned',
-  'Sarah Chen',
-  'Alex Rivera',
-  'Elena Rostova',
-  'David Kim',
+  'Anush',
+  'Nicholas',
+  'Sidharth',
+  'Hitesh',
 ];
 
 export const MeetingConverterPage: React.FC = () => {

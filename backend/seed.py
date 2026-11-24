@@ -12,7 +12,6 @@ from backend.auth import get_password_hash
 
 def seed_database():
     print("Seeding database in Neon PostgreSQL...")
-    # Tables are already created in Neon; create_all hangs on transaction pooler
     db = SessionLocal()
     default_password = "password123"
     hashed_pwd = get_password_hash(default_password)
@@ -32,12 +31,28 @@ def seed_database():
         else:
             print(f"Found existing organization: {acme_org.name} (id={acme_org.id})")
 
-        # Acme Users
+        # Clean up any legacy demo users for Acme Corp if present
+        legacy_demo_emails = [
+            "admin@acmecorp.com",
+            "manager@acmecorp.com",
+            "hr@acmecorp.com",
+            "employee@acmecorp.com",
+        ]
+        legacy_users = db.query(User).filter(User.org_id == acme_org.id, User.email.in_(legacy_demo_emails)).all()
+        if legacy_users:
+            print(f"Removing {len(legacy_users)} legacy demo users and refreshing Acme Corp demo data...")
+            db.query(Task).filter(Task.org_id == acme_org.id).delete()
+            db.query(AuditEvent).filter(AuditEvent.org_id == acme_org.id).delete()
+            for lu in legacy_users:
+                db.delete(lu)
+            db.commit()
+
+        # Acme Users: Anush, Sidharth, Nicholas, Hitesh
         acme_users_data = [
-            {"email": "admin@acmecorp.com", "name": "Sarah Chen", "role": "Admin", "department": "Executive"},
-            {"email": "manager@acmecorp.com", "name": "Alex Rivera", "role": "Manager", "department": "Product"},
-            {"email": "hr@acmecorp.com", "name": "Elena Rostova", "role": "HR", "department": "People Ops"},
-            {"email": "employee@acmecorp.com", "name": "David Kim", "role": "Employee", "department": "Engineering"},
+            {"email": "anush@acmecorp.com", "name": "Anush", "role": "Admin", "department": "Executive"},
+            {"email": "sidharth@acmecorp.com", "name": "Sidharth", "role": "HR", "department": "People Ops"},
+            {"email": "nicholas@acmecorp.com", "name": "Nicholas", "role": "Manager", "department": "Product"},
+            {"email": "hitesh@acmecorp.com", "name": "Hitesh", "role": "Employee", "department": "Engineering"},
         ]
 
         acme_users = {}
@@ -96,19 +111,19 @@ def seed_database():
             acme_projects[proj.name] = proj
 
         # Acme Tasks:
-        # David Kim: 38.0h non-completed (12 + 14 + 6 + 6) -> OVERLOADED (near/over 36h), 1 Overdue task!
-        # Alex Rivera: 12.0h non-completed (8 + 4) -> UNDER-UTILIZED (~12h)
-        # Sarah Chen: 22.0h non-completed (16 + 6) -> Pending Approval tasks
-        # Elena Rostova: 8.0h non-completed (8) -> Todo
+        # Hitesh (Employee): 38.0h non-completed (12 + 14 + 6 + 6) -> OVERLOADED (>= 36h threshold), 1 Overdue task
+        # Nicholas (Manager): 12.0h non-completed (8 + 4) -> UNDER-UTILIZED (~12h, recipient for simulation)
+        # Anush (Admin): 22.0h non-completed (16 + 6) -> Pending Approval review gate
+        # Sidharth (HR): 8.0h non-completed (8) -> Todo
         # Completed tasks: 3
-        # Overdue tasks: 1 (David Kim CVE task, due yesterday)
+        # Overdue tasks: 1 (Hitesh CVE task, due yesterday)
         # Pending approvals: 2
         acme_tasks_data = [
-            # David Kim's tasks (Total: 38h non-completed + 6h completed)
+            # Hitesh's tasks (Total: 38h non-completed + 6h completed)
             {
                 "title": "Implement RBAC middleware for multi-tenant isolation",
                 "project": "Enterprise Migration v2",
-                "assignee": "employee@acmecorp.com",
+                "assignee": "hitesh@acmecorp.com",
                 "status": "In Progress",
                 "priority": "Urgent",
                 "hours": 12.0,
@@ -117,7 +132,7 @@ def seed_database():
             {
                 "title": "Optimize vector embedding ChromaDB retrieval pipeline",
                 "project": "Enterprise Migration v2",
-                "assignee": "employee@acmecorp.com",
+                "assignee": "hitesh@acmecorp.com",
                 "status": "In Progress",
                 "priority": "High",
                 "hours": 14.0,
@@ -126,7 +141,7 @@ def seed_database():
             {
                 "title": "Audit serverless database connection pool",
                 "project": "Enterprise Migration v2",
-                "assignee": "employee@acmecorp.com",
+                "assignee": "hitesh@acmecorp.com",
                 "status": "Todo",
                 "priority": "High",
                 "hours": 6.0,
@@ -135,7 +150,7 @@ def seed_database():
             {
                 "title": "Resolve CVE vulnerability in Python dependencies",
                 "project": "Enterprise Migration v2",
-                "assignee": "employee@acmecorp.com",
+                "assignee": "hitesh@acmecorp.com",
                 "status": "In Progress",
                 "priority": "Urgent",
                 "hours": 6.0,
@@ -144,18 +159,18 @@ def seed_database():
             {
                 "title": "Initial database schema & Neon migration",
                 "project": "Enterprise Migration v2",
-                "assignee": "employee@acmecorp.com",
+                "assignee": "hitesh@acmecorp.com",
                 "status": "Done",
                 "priority": "Medium",
                 "hours": 6.0,
                 "due": now - timedelta(days=4),
             },
 
-            # Alex Rivera's tasks (Total: 12h non-completed + 4h completed)
+            # Nicholas's tasks (Total: 12h non-completed + 4h completed)
             {
                 "title": "Migrate legacy authentication to JWT tokens",
                 "project": "Enterprise Migration v2",
-                "assignee": "manager@acmecorp.com",
+                "assignee": "nicholas@acmecorp.com",
                 "status": "In Progress",
                 "priority": "High",
                 "hours": 8.0,
@@ -164,7 +179,7 @@ def seed_database():
             {
                 "title": "API gateway rate limiting and caching spec",
                 "project": "Enterprise Migration v2",
-                "assignee": "manager@acmecorp.com",
+                "assignee": "nicholas@acmecorp.com",
                 "status": "Todo",
                 "priority": "Medium",
                 "hours": 4.0,
@@ -173,18 +188,18 @@ def seed_database():
             {
                 "title": "Vite + Tailwind frontend shell setup",
                 "project": "Enterprise Migration v2",
-                "assignee": "manager@acmecorp.com",
+                "assignee": "nicholas@acmecorp.com",
                 "status": "Done",
                 "priority": "Medium",
                 "hours": 4.0,
                 "due": now - timedelta(days=5),
             },
 
-            # Sarah Chen's tasks (Total: 22h Pending Approval)
+            # Anush's tasks (Total: 22h Pending Approval)
             {
                 "title": "Quarterly security compliance review",
                 "project": "SOC-2 Type II Compliance",
-                "assignee": "admin@acmecorp.com",
+                "assignee": "anush@acmecorp.com",
                 "status": "Pending Approval",
                 "priority": "High",
                 "hours": 16.0,
@@ -193,18 +208,18 @@ def seed_database():
             {
                 "title": "SOC-2 Type II audit readiness evidence checklist",
                 "project": "SOC-2 Type II Compliance",
-                "assignee": "admin@acmecorp.com",
+                "assignee": "anush@acmecorp.com",
                 "status": "Pending Approval",
                 "priority": "High",
                 "hours": 6.0,
                 "due": now + timedelta(days=4),
             },
 
-            # Elena Rostova's tasks (Total: 8h Todo + 4h Done)
+            # Sidharth's tasks (Total: 8h Todo + 4h Done)
             {
                 "title": "Staffing roadmap & technical hiring pipeline",
                 "project": "Enterprise Migration v2",
-                "assignee": "hr@acmecorp.com",
+                "assignee": "sidharth@acmecorp.com",
                 "status": "Todo",
                 "priority": "Medium",
                 "hours": 8.0,
@@ -213,7 +228,7 @@ def seed_database():
             {
                 "title": "Prepare employee onboarding handbook & security policy",
                 "project": "SOC-2 Type II Compliance",
-                "assignee": "hr@acmecorp.com",
+                "assignee": "sidharth@acmecorp.com",
                 "status": "Done",
                 "priority": "Medium",
                 "hours": 4.0,
@@ -247,14 +262,13 @@ def seed_database():
                 print(f"  Updated task: {task.title} ({task.status}, {task.estimated_hours}h)")
 
         # Acme Audit Events
-        # Ensure we have rich chronological events
         existing_events = db.query(AuditEvent).filter(AuditEvent.org_id == acme_org.id).count()
         if existing_events < 5:
             events = [
                 AuditEvent(
                     org_id=acme_org.id,
-                    user_id=acme_users["admin@acmecorp.com"].id,
-                    user_name="Sarah Chen",
+                    user_id=acme_users["anush@acmecorp.com"].id,
+                    user_name="Anush",
                     action="ORGANIZATION_INITIALIZED",
                     resource_type="system",
                     resource_id=str(acme_org.id),
@@ -263,18 +277,18 @@ def seed_database():
                 ),
                 AuditEvent(
                     org_id=acme_org.id,
-                    user_id=acme_users["admin@acmecorp.com"].id,
-                    user_name="Sarah Chen",
+                    user_id=acme_users["anush@acmecorp.com"].id,
+                    user_name="Anush",
                     action="USER_INVITED",
                     resource_type="user",
-                    resource_id=str(acme_users["manager@acmecorp.com"].id),
-                    details="Invited Alex Rivera with role Manager.",
+                    resource_id=str(acme_users["nicholas@acmecorp.com"].id),
+                    details="Invited Nicholas with role Manager.",
                     timestamp=now - timedelta(days=2, hours=18),
                 ),
                 AuditEvent(
                     org_id=acme_org.id,
-                    user_id=acme_users["manager@acmecorp.com"].id,
-                    user_name="Alex Rivera",
+                    user_id=acme_users["nicholas@acmecorp.com"].id,
+                    user_name="Nicholas",
                     action="PROJECT_CREATED",
                     resource_type="project",
                     resource_id=str(acme_projects["Enterprise Migration v2"].id),
@@ -283,8 +297,8 @@ def seed_database():
                 ),
                 AuditEvent(
                     org_id=acme_org.id,
-                    user_id=acme_users["employee@acmecorp.com"].id,
-                    user_name="David Kim",
+                    user_id=acme_users["hitesh@acmecorp.com"].id,
+                    user_name="Hitesh",
                     action="TASK_STARTED",
                     resource_type="task",
                     resource_id="101",
@@ -293,13 +307,23 @@ def seed_database():
                 ),
                 AuditEvent(
                     org_id=acme_org.id,
-                    user_id=acme_users["admin@acmecorp.com"].id,
-                    user_name="Sarah Chen",
+                    user_id=acme_users["anush@acmecorp.com"].id,
+                    user_name="Anush",
                     action="WORKLOAD_AUDITED",
                     resource_type="analytics",
                     resource_id="tower",
                     details="Control tower executive analytics snapshot generated.",
                     timestamp=now - timedelta(minutes=15),
+                ),
+                AuditEvent(
+                    org_id=acme_org.id,
+                    user_id=acme_users["sidharth@acmecorp.com"].id,
+                    user_name="Sidharth",
+                    action="USER_LOGIN",
+                    resource_type="user",
+                    resource_id=str(acme_users["sidharth@acmecorp.com"].id),
+                    details="Sidharth logged in via HS256 JWT auth.",
+                    timestamp=now - timedelta(minutes=5),
                 ),
             ]
             db.add_all(events)
@@ -358,8 +382,8 @@ def seed_database():
 
         # Globex Projects
         globex_projects_data = [
-            {"name": "NextGen Autonomous Sensor Pipeline", "description": "High-throughput telemetry ingestion network.", "status": "In Progress"},
-            {"name": "Developer Experience Platform", "description": "Internal developer portal & CI/CD automations.", "status": "In Progress"},
+            {"name": "Quantum AI Infrastructure", "description": "Next-gen platform scaling and cluster orchestration.", "status": "In Progress"},
+            {"name": "BioTech Research Pipeline", "description": "Automated data parsing and clinical trial workflows.", "status": "In Progress"},
         ]
         globex_projects = {}
         for p_data in globex_projects_data:
@@ -383,82 +407,116 @@ def seed_database():
             globex_projects[proj.name] = proj
 
         # Globex Tasks:
-        # Liam Johnson: 38.0h non-completed (14 + 18 + 6) -> Overloaded
-        # Jessica Lee: 12.0h non-completed (8 + 4) -> Under-utilized
-        # Marcus Vance: 14.0h non-completed (14 Pending Approval)
-        # Sonia Patel: 8.0h non-completed (8 Todo)
+        # Liam Johnson: 36.0h (16 + 12 + 8) -> OVERLOADED (>= 36h)
+        # Jessica Lee: 10.0h (6 + 4) -> UNDER-UTILIZED
+        # Marcus Vance: 18.0h -> Pending Approval
+        # Sonia Patel: 6.0h -> Todo
         globex_tasks_data = [
+            # Liam Johnson (Platform Engineer)
             {
-                "title": "Calibrate telemetry ingestion pipeline",
-                "project": "NextGen Autonomous Sensor Pipeline",
+                "title": "Kubernetes cluster autoscaling & GPU driver tuning",
+                "project": "Quantum AI Infrastructure",
                 "assignee": "employee@globex.com",
                 "status": "In Progress",
                 "priority": "Urgent",
-                "hours": 14.0,
+                "hours": 16.0,
                 "due": now + timedelta(days=2),
             },
             {
-                "title": "Provision multi-region Kubernetes cluster",
-                "project": "Developer Experience Platform",
+                "title": "Bio-data ingestion pipeline latency optimization",
+                "project": "BioTech Research Pipeline",
                 "assignee": "employee@globex.com",
                 "status": "In Progress",
-                "priority": "Urgent",
-                "hours": 18.0,
-                "due": now + timedelta(days=1),
+                "priority": "High",
+                "hours": 12.0,
+                "due": now + timedelta(days=3),
             },
             {
-                "title": "Patch telemetry streaming buffer memory leak",
-                "project": "NextGen Autonomous Sensor Pipeline",
+                "title": "Zero-trust network policy hardening across pods",
+                "project": "Quantum AI Infrastructure",
                 "assignee": "employee@globex.com",
                 "status": "Todo",
                 "priority": "High",
-                "hours": 6.0,
+                "hours": 8.0,
+                "due": now + timedelta(days=5),
+            },
+            {
+                "title": "Resolve critical OpenSSL memory leak alert",
+                "project": "Quantum AI Infrastructure",
+                "assignee": "employee@globex.com",
+                "status": "In Progress",
+                "priority": "Urgent",
+                "hours": 8.0,
                 "due": now - timedelta(days=1),  # Overdue!
             },
             {
-                "title": "Review edge sensor latency benchmarks",
-                "project": "NextGen Autonomous Sensor Pipeline",
+                "title": "Setup distributed caching layer for model weights",
+                "project": "Quantum AI Infrastructure",
+                "assignee": "employee@globex.com",
+                "status": "Done",
+                "priority": "Medium",
+                "hours": 6.0,
+                "due": now - timedelta(days=3),
+            },
+
+            # Jessica Lee (R&D Manager)
+            {
+                "title": "Review synthetic dataset generation metrics",
+                "project": "BioTech Research Pipeline",
                 "assignee": "manager@globex.com",
                 "status": "In Progress",
                 "priority": "High",
-                "hours": 8.0,
-                "due": now + timedelta(days=4),
+                "hours": 6.0,
+                "due": now + timedelta(days=2),
             },
             {
-                "title": "Draft internal CI/CD observability guidelines",
-                "project": "Developer Experience Platform",
+                "title": "Research sprint backlog grooming & prioritization",
+                "project": "BioTech Research Pipeline",
                 "assignee": "manager@globex.com",
                 "status": "Todo",
                 "priority": "Medium",
                 "hours": 4.0,
+                "due": now + timedelta(days=4),
+            },
+            {
+                "title": "Q3 machine learning benchmark sign-off",
+                "project": "Quantum AI Infrastructure",
+                "assignee": "manager@globex.com",
+                "status": "Done",
+                "priority": "Medium",
+                "hours": 5.0,
+                "due": now - timedelta(days=4),
+            },
+
+            # Marcus Vance (Admin)
+            {
+                "title": "Executive AI governance & ethics committee charter",
+                "project": "Quantum AI Infrastructure",
+                "assignee": "admin@globex.com",
+                "status": "Pending Approval",
+                "priority": "Urgent",
+                "hours": 18.0,
+                "due": now + timedelta(days=5),
+            },
+
+            # Sonia Patel (HR)
+            {
+                "title": "Research fellow compensation benchmark review",
+                "project": "BioTech Research Pipeline",
+                "assignee": "hr@globex.com",
+                "status": "Todo",
+                "priority": "Medium",
+                "hours": 6.0,
                 "due": now + timedelta(days=6),
             },
             {
-                "title": "Q3 Infrastructure architectural review",
-                "project": "NextGen Autonomous Sensor Pipeline",
-                "assignee": "admin@globex.com",
-                "status": "Pending Approval",
-                "priority": "High",
-                "hours": 14.0,
-                "due": now + timedelta(days=5),
-            },
-            {
-                "title": "Coordinate platform engineering recruitment pipeline",
-                "project": "Developer Experience Platform",
-                "assignee": "hr@globex.com",
-                "status": "Todo",
-                "priority": "Low",
-                "hours": 8.0,
-                "due": now + timedelta(days=3),
-            },
-            {
-                "title": "Update remote work and equipment stipend guide",
-                "project": "Developer Experience Platform",
+                "title": "Publish updated remote IP and patent protection clause",
+                "project": "Quantum AI Infrastructure",
                 "assignee": "hr@globex.com",
                 "status": "Done",
-                "priority": "Low",
-                "hours": 5.0,
-                "due": now - timedelta(days=3),
+                "priority": "Medium",
+                "hours": 4.0,
+                "due": now - timedelta(days=2),
             },
         ]
 
@@ -487,11 +545,69 @@ def seed_database():
                 db.commit()
                 print(f"  Updated task: {task.title} ({task.status}, {task.estimated_hours}h)")
 
-        print("\nSeed completed successfully! Workloads and metrics calibrated.")
+        # Globex Audit Events
+        existing_globex_events = db.query(AuditEvent).filter(AuditEvent.org_id == globex_org.id).count()
+        if existing_globex_events < 5:
+            events = [
+                AuditEvent(
+                    org_id=globex_org.id,
+                    user_id=globex_users["admin@globex.com"].id,
+                    user_name="Marcus Vance",
+                    action="ORGANIZATION_INITIALIZED",
+                    resource_type="system",
+                    resource_id=str(globex_org.id),
+                    details="Globex Labs workspace initialized with isolated tenant schema.",
+                    timestamp=now - timedelta(days=4),
+                ),
+                AuditEvent(
+                    org_id=globex_org.id,
+                    user_id=globex_users["admin@globex.com"].id,
+                    user_name="Marcus Vance",
+                    action="USER_INVITED",
+                    resource_type="user",
+                    resource_id=str(globex_users["manager@globex.com"].id),
+                    details="Invited Jessica Lee as Manager for R&D operations.",
+                    timestamp=now - timedelta(days=3),
+                ),
+                AuditEvent(
+                    org_id=globex_org.id,
+                    user_id=globex_users["manager@globex.com"].id,
+                    user_name="Jessica Lee",
+                    action="PROJECT_CREATED",
+                    resource_type="project",
+                    resource_id=str(globex_projects["Quantum AI Infrastructure"].id),
+                    details="Created Quantum AI Infrastructure project track.",
+                    timestamp=now - timedelta(days=2, hours=12),
+                ),
+                AuditEvent(
+                    org_id=globex_org.id,
+                    user_id=globex_users["employee@globex.com"].id,
+                    user_name="Liam Johnson",
+                    action="TASK_STARTED",
+                    resource_type="task",
+                    resource_id="201",
+                    details="Began work on Kubernetes cluster autoscaling & GPU driver tuning.",
+                    timestamp=now - timedelta(hours=6),
+                ),
+                AuditEvent(
+                    org_id=globex_org.id,
+                    user_id=globex_users["admin@globex.com"].id,
+                    user_name="Marcus Vance",
+                    action="WORKLOAD_AUDITED",
+                    resource_type="analytics",
+                    resource_id="tower",
+                    details="Executive workload and compliance audit completed.",
+                    timestamp=now - timedelta(minutes=45),
+                ),
+            ]
+            db.add_all(events)
+            db.commit()
+            print("  Created audit events for Globex Labs")
 
+        print("\nAll database tables successfully seeded for multi-tenant organizations!")
     except Exception as e:
+        print(f"Error seeding database: {e}")
         db.rollback()
-        print(f"Error during seeding: {e}")
         raise e
     finally:
         db.close()
