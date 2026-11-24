@@ -10,10 +10,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        canvas: '#09090B',
-        surface: '#111114',
-        elevated: '#18181B',
-        border: 'rgba(255, 255, 255, 0.08)',
+        canvas: 'var(--canvas)',
+        surface: 'var(--surface)',
+        elevated: 'var(--elevated)',
+        subtle: 'var(--subtle)',
+        border: 'var(--border)',
+        'text-primary': 'var(--text-primary)',
+        'text-muted': 'var(--text-muted)',
         brand: {
           DEFAULT: '#6366F1',
           hover: '#4F46E5',

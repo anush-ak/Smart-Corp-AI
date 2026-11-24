@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Mail, Loader2, Building2, UserCheck, ArrowRight, AlertCircle } from 'lucide-react';
+import { Lock, Mail, Loader2, Building2, UserCheck, ArrowRight, AlertCircle, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { Role } from '../types';
 
 interface DemoAccount {
@@ -83,14 +84,15 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
 ];
 
 const ROLE_BADGES: Record<Role, string> = {
-  Admin: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30',
-  Manager: 'bg-sky-500/15 text-sky-400 border-sky-500/30',
-  HR: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-  Employee: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+  Admin: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/30',
+  Manager: 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/30',
+  HR: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
+  Employee: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
 };
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('admin@acmecorp.com');
@@ -135,28 +137,50 @@ export const LoginPage: React.FC = () => {
   const filteredDemoAccounts = DEMO_ACCOUNTS.filter((acc) => acc.org === selectedOrg);
 
   return (
-    <div className="min-h-screen w-full bg-[#09090B] flex flex-col justify-center items-center p-4 selection:bg-indigo-500/20 selection:text-indigo-200">
+    <div className="min-h-screen w-full bg-canvas flex flex-col justify-center items-center p-4 selection:bg-indigo-500/20 selection:text-indigo-200 relative transition-colors">
+      {/* Sleek Theme Switcher (Top-right corner) */}
+      <div className="absolute top-4 right-4 z-10">
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-surface border border-border shadow-xs text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-elevated transition-colors cursor-pointer"
+          title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
+        >
+          {theme === 'dark' ? (
+            <>
+              <Sun size={14} strokeWidth={1.75} className="text-amber-400" />
+              <span>Light</span>
+            </>
+          ) : (
+            <>
+              <Moon size={14} strokeWidth={1.75} className="text-indigo-600" />
+              <span>Dark</span>
+            </>
+          )}
+        </button>
+      </div>
+
       <div className="w-full max-w-[420px] space-y-6">
         {/* Brand Header */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-[#111114] border border-white/[0.08] shadow-sm mb-1">
-            <span className="font-semibold text-sm text-indigo-400">SC</span>
+          <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-surface border border-border shadow-xs mb-1">
+            <span className="font-semibold text-sm text-indigo-600 dark:text-indigo-400">SC</span>
           </div>
-          <h1 className="text-xl font-semibold tracking-tight text-zinc-100">SmartCorp AI</h1>
-          <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+          <h1 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">SmartCorp AI</h1>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto">
             Autonomous multi-tenant enterprise operations copilot
           </p>
         </div>
 
         {/* Main Card */}
-        <div className="bg-[#111114] border border-white/[0.08] rounded-xl p-6 shadow-xl space-y-5">
-          <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
-            <span className="text-xs font-medium text-zinc-200">Sign in to workspace</span>
-            <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">HS256 JWT</span>
+        <div className="bg-surface border border-border rounded-xl p-6 shadow-xl space-y-5">
+          <div className="flex items-center justify-between pb-3 border-b border-border">
+            <span className="text-xs font-medium text-zinc-800 dark:text-zinc-200">Sign in to workspace</span>
+            <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">HS256 JWT</span>
           </div>
 
           {errorMessage && (
-            <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-start space-x-2 text-rose-400 text-xs">
+            <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-start space-x-2 text-rose-600 dark:text-rose-400 text-xs">
               <AlertCircle size={15} className="shrink-0 mt-0.5" strokeWidth={1.75} />
               <span>{errorMessage}</span>
             </div>
@@ -164,12 +188,12 @@ export const LoginPage: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-zinc-300">Email Address</label>
+              <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Email Address</label>
               <div className="relative">
                 <Mail
                   size={14}
                   strokeWidth={1.75}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500 pointer-events-none"
                 />
                 <input
                   type="email"
@@ -178,18 +202,18 @@ export const LoginPage: React.FC = () => {
                   placeholder="name@company.com"
                   required
                   disabled={isSubmitting}
-                  className="w-full pl-9 pr-3 py-2 bg-[#09090B] border border-white/[0.08] rounded-md text-xs text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/60 transition-colors"
+                  className="w-full pl-9 pr-3 py-2 bg-canvas border border-border rounded-md text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/60 transition-colors"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-zinc-300">Password</label>
+              <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Password</label>
               <div className="relative">
                 <Lock
                   size={14}
                   strokeWidth={1.75}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500 pointer-events-none"
                 />
                 <input
                   type="password"
@@ -198,7 +222,7 @@ export const LoginPage: React.FC = () => {
                   placeholder="••••••••••••"
                   required
                   disabled={isSubmitting}
-                  className="w-full pl-9 pr-3 py-2 bg-[#09090B] border border-white/[0.08] rounded-md text-xs text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/60 transition-colors"
+                  className="w-full pl-9 pr-3 py-2 bg-canvas border border-border rounded-md text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/60 transition-colors"
                 />
               </div>
             </div>
@@ -206,7 +230,7 @@ export const LoginPage: React.FC = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-2 px-4 rounded-md bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium text-white transition-colors flex items-center justify-center space-x-2 cursor-pointer shadow-sm mt-2"
+              className="w-full py-2 px-4 rounded-md bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium text-white transition-colors flex items-center justify-center space-x-2 cursor-pointer shadow-xs mt-2"
             >
               {isSubmitting ? (
                 <>
@@ -223,21 +247,21 @@ export const LoginPage: React.FC = () => {
           </form>
 
           {/* Quick Demo Accounts Selector */}
-          <div className="pt-4 border-t border-white/[0.06] space-y-3">
+          <div className="pt-4 border-t border-border space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-1.5 text-xs text-zinc-300 font-medium">
-                <UserCheck size={14} className="text-indigo-400" strokeWidth={1.75} />
+              <div className="flex items-center space-x-1.5 text-xs text-zinc-700 dark:text-zinc-300 font-medium">
+                <UserCheck size={14} className="text-indigo-600 dark:text-indigo-400" strokeWidth={1.75} />
                 <span>Quick Demo Accounts</span>
               </div>
               {/* Tenant switcher */}
-              <div className="inline-flex rounded-md p-0.5 bg-[#09090B] border border-white/[0.08]">
+              <div className="inline-flex rounded-md p-0.5 bg-canvas border border-border">
                 <button
                   type="button"
                   onClick={() => setSelectedOrg('Acme Corp')}
-                  className={`text-[10px] font-medium px-2 py-0.5 rounded transition-colors ${
+                  className={`text-[10px] font-medium px-2 py-0.5 rounded transition-colors cursor-pointer ${
                     selectedOrg === 'Acme Corp'
-                      ? 'bg-[#18181B] text-zinc-100 border border-white/[0.08]'
-                      : 'text-zinc-500 hover:text-zinc-300'
+                      ? 'bg-elevated text-zinc-900 dark:text-zinc-100 border border-border shadow-xs'
+                      : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300'
                   }`}
                 >
                   Acme Corp
@@ -245,10 +269,10 @@ export const LoginPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSelectedOrg('Globex Labs')}
-                  className={`text-[10px] font-medium px-2 py-0.5 rounded transition-colors ${
+                  className={`text-[10px] font-medium px-2 py-0.5 rounded transition-colors cursor-pointer ${
                     selectedOrg === 'Globex Labs'
-                      ? 'bg-[#18181B] text-zinc-100 border border-white/[0.08]'
-                      : 'text-zinc-500 hover:text-zinc-300'
+                      ? 'bg-elevated text-zinc-900 dark:text-zinc-100 border border-border shadow-xs'
+                      : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300'
                   }`}
                 >
                   Globex Labs
@@ -263,10 +287,10 @@ export const LoginPage: React.FC = () => {
                   type="button"
                   onClick={() => handleQuickSelect(account)}
                   disabled={isSubmitting}
-                  className="group p-2.5 text-left rounded-lg bg-[#141418] hover:bg-[#18181E] border border-white/[0.06] hover:border-white/[0.12] transition-colors cursor-pointer flex flex-col justify-between"
+                  className="group p-2.5 text-left rounded-lg bg-subtle hover:bg-elevated border border-border transition-colors cursor-pointer flex flex-col justify-between"
                 >
                   <div className="flex items-center justify-between w-full mb-1">
-                    <span className="text-[11px] font-medium text-zinc-200 group-hover:text-indigo-300 transition-colors truncate">
+                    <span className="text-[11px] font-medium text-zinc-800 dark:text-zinc-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors truncate">
                       {account.name}
                     </span>
                     <span
@@ -277,7 +301,7 @@ export const LoginPage: React.FC = () => {
                       {account.role}
                     </span>
                   </div>
-                  <div className="text-[10px] font-mono text-zinc-500 truncate group-hover:text-zinc-400">
+                  <div className="text-[10px] font-mono text-zinc-500 truncate group-hover:text-zinc-700 dark:group-hover:text-zinc-400">
                     {account.department}
                   </div>
                 </button>
@@ -287,7 +311,7 @@ export const LoginPage: React.FC = () => {
         </div>
 
         {/* Security Invariant Note */}
-        <div className="text-center text-[11px] text-zinc-500 flex items-center justify-center space-x-1.5">
+        <div className="text-center text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center justify-center space-x-1.5">
           <Building2 size={12} strokeWidth={1.75} />
           <span>Multi-tenant isolation enforced via verified JWT claims</span>
         </div>

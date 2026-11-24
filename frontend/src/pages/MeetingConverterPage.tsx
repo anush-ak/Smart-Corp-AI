@@ -171,28 +171,28 @@ export const MeetingConverterPage: React.FC = () => {
   const estimatedDaysSaved = Math.max(1, Math.round(draftTasks.length * 0.4));
 
   return (
-    <div className="flex-1 flex flex-col h-screen overflow-hidden bg-[#09090B]">
+    <div className="flex-1 flex flex-col h-screen overflow-hidden bg-canvas text-zinc-900 dark:text-zinc-100 transition-colors">
       {/* Top Header */}
-      <header className="h-14 border-b border-white/[0.08] px-6 flex items-center justify-between shrink-0 bg-[#09090B]">
+      <header className="h-14 border-b border-border px-6 flex items-center justify-between shrink-0 bg-surface">
         <div className="flex items-center space-x-3">
-          <FileSpreadsheet size={16} className="text-indigo-400" strokeWidth={1.75} />
-          <h1 className="text-sm font-semibold text-zinc-100">Meeting Notes to Action Items</h1>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/[0.06] text-zinc-400 border border-white/[0.06]">
+          <FileSpreadsheet size={16} className="text-indigo-600 dark:text-indigo-400" strokeWidth={1.75} />
+          <h1 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Meeting Notes to Action Items</h1>
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-subtle text-zinc-600 dark:text-zinc-400 border border-border">
             Phase 4 Workbench
           </span>
         </div>
 
         <div className="flex items-center space-x-3">
-          <div className="text-xs text-zinc-400 font-mono">
-            Tenant: <span className="text-zinc-200">{user?.org_name}</span> | Role:{' '}
-            <span className="text-indigo-400 font-medium">{user?.role}</span>
+          <div className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
+            Tenant: <span className="text-zinc-800 dark:text-zinc-200 font-medium">{user?.org_name}</span> | Role:{' '}
+            <span className="text-indigo-600 dark:text-indigo-400 font-medium">{user?.role}</span>
           </div>
         </div>
       </header>
 
       {/* Role Notice if not Admin/Manager */}
       {!canExtractAndPublish && (
-        <div className="bg-amber-500/10 border-b border-amber-500/20 px-6 py-2 flex items-center space-x-2 text-xs text-amber-400 shrink-0">
+        <div className="bg-amber-500/10 border-b border-amber-500/20 px-6 py-2 flex items-center space-x-2 text-xs text-amber-700 dark:text-amber-400 shrink-0">
           <ShieldAlert size={14} strokeWidth={1.75} />
           <span>
             You are logged in as <strong>{user?.role}</strong>. Only <strong>Admin</strong> or{' '}
@@ -202,22 +202,22 @@ export const MeetingConverterPage: React.FC = () => {
       )}
 
       {/* Main 50/50 Workbench */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-white/[0.08] overflow-hidden">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-border overflow-hidden">
         {/* Left Column: Raw Meeting Notes Editor */}
-        <div className="flex flex-col h-full overflow-hidden bg-[#09090B] p-5">
+        <div className="flex flex-col h-full overflow-hidden bg-surface p-5">
           <div className="flex items-center justify-between pb-3 shrink-0">
             <div className="flex items-center space-x-2">
-              <FileText size={15} className="text-zinc-400" strokeWidth={1.75} />
-              <span className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
+              <FileText size={15} className="text-zinc-400 dark:text-zinc-500" strokeWidth={1.75} />
+              <span className="text-xs font-semibold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
                 Raw Meeting Transcript
               </span>
             </div>
             <button
               type="button"
               onClick={handleLoadSample}
-              className="inline-flex items-center space-x-1.5 text-xs text-zinc-400 hover:text-zinc-200 bg-white/[0.04] hover:bg-white/[0.08] px-2.5 py-1 rounded border border-white/[0.08] transition-colors"
+              className="inline-flex items-center space-x-1.5 text-xs text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 bg-subtle hover:bg-elevated px-2.5 py-1 rounded border border-border transition-colors cursor-pointer"
             >
-              <FileText size={12} strokeWidth={1.75} className="text-indigo-400" />
+              <FileText size={12} strokeWidth={1.75} className="text-indigo-600 dark:text-indigo-400" />
               <span>Load Sample Meeting Notes</span>
             </button>
           </div>
@@ -227,18 +227,18 @@ export const MeetingConverterPage: React.FC = () => {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Paste raw meeting notes, transcripts, or minutes here... (e.g. 'David will complete load-testing by Friday. Elena to update handbook.')"
-              className="w-full flex-1 p-4 rounded-lg bg-[#111114] border border-white/[0.08] text-zinc-200 placeholder-zinc-600 text-xs font-mono leading-relaxed resize-none focus:outline-none focus:border-indigo-500/60 transition-colors"
+              className="w-full flex-1 p-4 rounded-lg bg-canvas border border-border text-zinc-900 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-600 text-xs font-mono leading-relaxed resize-none focus:outline-none focus:border-indigo-500/60 transition-colors"
             />
           </div>
 
           {extractError && (
-            <div className="mt-3 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center space-x-2 shrink-0">
+            <div className="mt-3 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs flex items-center space-x-2 shrink-0">
               <AlertTriangle size={14} strokeWidth={1.75} className="shrink-0" />
               <span>{extractError}</span>
             </div>
           )}
 
-          <div className="mt-4 flex items-center justify-between shrink-0 pt-2 border-t border-white/[0.06]">
+          <div className="mt-4 flex items-center justify-between shrink-0 pt-2 border-t border-border">
             <span className="text-[11px] font-mono text-zinc-500 tabular-nums">
               {notes.length} characters | {notes.split(/\s+/).filter(Boolean).length} words
             </span>
@@ -247,7 +247,7 @@ export const MeetingConverterPage: React.FC = () => {
               type="button"
               onClick={handleExtract}
               disabled={isExtracting || !canExtractAndPublish || !notes.trim()}
-              className="inline-flex items-center space-x-2 text-xs font-medium px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors"
+              className="inline-flex items-center space-x-2 text-xs font-medium px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors cursor-pointer shadow-xs"
             >
               {isExtracting ? (
                 <>
@@ -265,15 +265,15 @@ export const MeetingConverterPage: React.FC = () => {
         </div>
 
         {/* Right Column: Editable Draft Task Cards */}
-        <div className="flex flex-col h-full overflow-hidden bg-[#09090B] p-5">
+        <div className="flex flex-col h-full overflow-hidden bg-surface p-5">
           <div className="flex items-center justify-between pb-3 shrink-0">
             <div className="flex items-center space-x-2">
-              <CheckCircle2 size={15} className="text-zinc-400" strokeWidth={1.75} />
-              <span className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
+              <CheckCircle2 size={15} className="text-zinc-400 dark:text-zinc-500" strokeWidth={1.75} />
+              <span className="text-xs font-semibold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
                 Action Items Workbench
               </span>
               {draftTasks.length > 0 && (
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
                   {draftTasks.length} {draftTasks.length === 1 ? 'task' : 'tasks'}
                 </span>
               )}
@@ -282,7 +282,7 @@ export const MeetingConverterPage: React.FC = () => {
             {draftTasks.length > 0 && (
               <div className="flex items-center space-x-2">
                 {/* Emerald Saves X Days Badge */}
-                <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-mono font-medium">
+                <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[11px] font-mono font-medium">
                   <Check size={11} strokeWidth={2} />
                   <span>Saves ~{estimatedDaysSaved} Days</span>
                 </div>
@@ -290,7 +290,7 @@ export const MeetingConverterPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleAddManualTask}
-                  className="inline-flex items-center space-x-1 text-xs text-zinc-400 hover:text-zinc-200 bg-white/[0.04] hover:bg-white/[0.08] px-2.5 py-1 rounded border border-white/[0.08] transition-colors"
+                  className="inline-flex items-center space-x-1 text-xs text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 bg-subtle hover:bg-elevated px-2.5 py-1 rounded border border-border transition-colors cursor-pointer"
                 >
                   <Plus size={12} strokeWidth={1.75} />
                   <span>Add Item</span>
@@ -301,8 +301,8 @@ export const MeetingConverterPage: React.FC = () => {
 
           {/* Uncertainty Review Warning Banner */}
           {uncertainCount > 0 && (
-            <div className="mb-3 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center space-x-2 shrink-0">
-              <AlertTriangle size={14} className="text-amber-400 shrink-0" strokeWidth={1.75} />
+            <div className="mb-3 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs flex items-center space-x-2 shrink-0">
+              <AlertTriangle size={14} className="text-amber-600 dark:text-amber-400 shrink-0" strokeWidth={1.75} />
               <span>
                 <strong>{uncertainCount}</strong> task {uncertainCount === 1 ? 'has' : 'have'}{' '}
                 unassigned owners or missing dates. Highlighted in amber below for verification.
@@ -312,7 +312,7 @@ export const MeetingConverterPage: React.FC = () => {
 
           {/* Success Banner after batch publishing */}
           {publishSuccess && (
-            <div className="mb-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center justify-between shrink-0">
+            <div className="mb-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs flex items-center justify-between shrink-0">
               <div className="flex items-center space-x-2">
                 <CheckCircle2 size={15} strokeWidth={1.75} />
                 <span>
@@ -322,7 +322,7 @@ export const MeetingConverterPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate('/tasks')}
-                className="inline-flex items-center space-x-1 font-semibold text-emerald-300 hover:text-emerald-100 underline underline-offset-2 ml-3"
+                className="inline-flex items-center space-x-1 font-semibold text-emerald-700 dark:text-emerald-300 hover:underline underline-offset-2 ml-3 cursor-pointer"
               >
                 <span>View Task Board</span>
                 <ArrowRight size={12} />
@@ -333,12 +333,12 @@ export const MeetingConverterPage: React.FC = () => {
           {/* Task Cards List */}
           <div className="flex-1 overflow-y-auto min-h-0 space-y-3 pr-1">
             {draftTasks.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center p-8 text-center rounded-lg bg-[#111114] border border-white/[0.08] text-zinc-500 space-y-3">
-                <div className="w-10 h-10 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-zinc-400">
+              <div className="h-full flex flex-col items-center justify-center p-8 text-center rounded-lg bg-subtle/50 border border-border text-zinc-500 space-y-3">
+                <div className="w-10 h-10 rounded-lg bg-surface border border-border flex items-center justify-center text-zinc-400 dark:text-zinc-500">
                   <FileSpreadsheet size={18} strokeWidth={1.75} />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-zinc-300">No Action Items Extracted Yet</p>
+                  <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">No Action Items Extracted Yet</p>
                   <p className="text-[11px] text-zinc-500 mt-1 max-w-xs">
                     Paste meeting notes on the left or click "Load Sample Meeting Notes", then click "Extract Action Items" to generate structured tasks.
                   </p>
@@ -353,10 +353,10 @@ export const MeetingConverterPage: React.FC = () => {
                 return (
                   <div
                     key={idx}
-                    className={`p-4 rounded-lg bg-[#111114] transition-colors ${
+                    className={`p-4 rounded-lg bg-surface transition-colors shadow-xs ${
                       hasUncertainty
-                        ? 'border border-amber-500/40 bg-amber-500/[0.02]'
-                        : 'border border-white/[0.08]'
+                        ? 'border border-amber-500/40 bg-amber-500/[0.04]'
+                        : 'border border-border'
                     }`}
                   >
                     {/* Top Row: Title + Delete */}
@@ -366,14 +366,14 @@ export const MeetingConverterPage: React.FC = () => {
                           type="text"
                           value={task.title}
                           onChange={(e) => handleUpdateTask(idx, 'title', e.target.value)}
-                          className="w-full bg-transparent text-xs font-medium text-zinc-100 border-b border-white/[0.08] focus:border-indigo-500 focus:outline-none pb-1"
+                          className="w-full bg-transparent text-xs font-medium text-zinc-900 dark:text-zinc-100 border-b border-border focus:border-indigo-500 focus:outline-none pb-1"
                           placeholder="Task title..."
                         />
                       </div>
                       <button
                         type="button"
                         onClick={() => handleDeleteTask(idx)}
-                        className="text-zinc-500 hover:text-rose-400 transition-colors p-1"
+                        className="text-zinc-400 hover:text-rose-500 dark:hover:text-rose-400 transition-colors p-1 cursor-pointer"
                         title="Remove task"
                       >
                         <Trash2 size={13} strokeWidth={1.75} />
@@ -388,16 +388,16 @@ export const MeetingConverterPage: React.FC = () => {
                           <User size={10} />
                           <span>Assignee</span>
                           {isAssigneeUncertain && (
-                            <span className="text-amber-400 font-bold">*</span>
+                            <span className="text-amber-500 dark:text-amber-400 font-bold">*</span>
                           )}
                         </label>
                         <select
                           value={task.assignee}
                           onChange={(e) => handleUpdateTask(idx, 'assignee', e.target.value)}
-                          className={`w-full text-xs rounded px-2 py-1.5 bg-[#18181B] focus:outline-none focus:border-indigo-500 ${
+                          className={`w-full text-xs rounded px-2 py-1.5 bg-canvas focus:outline-none focus:border-indigo-500 ${
                             isAssigneeUncertain
-                              ? 'border border-amber-500/60 text-amber-300'
-                              : 'border border-white/[0.08] text-zinc-200'
+                              ? 'border border-amber-500/60 text-amber-700 dark:text-amber-300'
+                              : 'border border-border text-zinc-800 dark:text-zinc-200'
                           }`}
                         >
                           {AVAILABLE_ASSIGNEES.map((member) => (
@@ -414,7 +414,7 @@ export const MeetingConverterPage: React.FC = () => {
                           <Calendar size={10} />
                           <span>Due Date</span>
                           {isDateUncertain && (
-                            <span className="text-amber-400 font-bold">*</span>
+                            <span className="text-amber-500 dark:text-amber-400 font-bold">*</span>
                           )}
                         </label>
                         <input
@@ -423,10 +423,10 @@ export const MeetingConverterPage: React.FC = () => {
                           onChange={(e) =>
                             handleUpdateTask(idx, 'due_date', e.target.value || null)
                           }
-                          className={`w-full text-xs rounded px-2 py-1 bg-[#18181B] focus:outline-none focus:border-indigo-500 ${
+                          className={`w-full text-xs rounded px-2 py-1 bg-canvas focus:outline-none focus:border-indigo-500 ${
                             isDateUncertain
-                              ? 'border border-amber-500/60 text-amber-300'
-                              : 'border border-white/[0.08] text-zinc-200'
+                              ? 'border border-amber-500/60 text-amber-700 dark:text-amber-300'
+                              : 'border border-border text-zinc-800 dark:text-zinc-200'
                           }`}
                         />
                       </div>
@@ -446,7 +446,7 @@ export const MeetingConverterPage: React.FC = () => {
                             onChange={(e) =>
                               handleUpdateTask(idx, 'est_hours', parseFloat(e.target.value) || 1.0)
                             }
-                            className="w-full text-xs rounded px-2 py-1 bg-[#18181B] border border-white/[0.08] text-zinc-200 font-mono tabular-nums focus:outline-none focus:border-indigo-500"
+                            className="w-full text-xs rounded px-2 py-1 bg-canvas border border-border text-zinc-800 dark:text-zinc-200 font-mono tabular-nums focus:outline-none focus:border-indigo-500"
                           />
                         </div>
 
@@ -457,7 +457,7 @@ export const MeetingConverterPage: React.FC = () => {
                           <select
                             value={task.priority}
                             onChange={(e) => handleUpdateTask(idx, 'priority', e.target.value)}
-                            className="w-full text-xs rounded px-2 py-1.5 bg-[#18181B] border border-white/[0.08] text-zinc-200 focus:outline-none focus:border-indigo-500"
+                            className="w-full text-xs rounded px-2 py-1.5 bg-canvas border border-border text-zinc-800 dark:text-zinc-200 focus:outline-none focus:border-indigo-500"
                           >
                             <option value="Low">Low</option>
                             <option value="Medium">Medium</option>
@@ -470,7 +470,7 @@ export const MeetingConverterPage: React.FC = () => {
 
                     {/* Uncertainty alert tag */}
                     {hasUncertainty && (
-                      <div className="mt-2.5 pt-2 border-t border-amber-500/20 flex items-center space-x-1.5 text-[11px] text-amber-400 font-mono">
+                      <div className="mt-2.5 pt-2 border-t border-amber-500/20 flex items-center space-x-1.5 text-[11px] text-amber-700 dark:text-amber-400 font-mono">
                         <AlertTriangle size={12} strokeWidth={1.75} />
                         <span>
                           {isAssigneeUncertain && isDateUncertain
@@ -489,32 +489,27 @@ export const MeetingConverterPage: React.FC = () => {
 
           {/* Bottom Action Footer */}
           {draftTasks.length > 0 && (
-            <div className="mt-4 pt-3 border-t border-white/[0.08] flex items-center justify-between shrink-0">
-              <div className="text-xs text-zinc-400 font-mono">
+            <div className="mt-4 pt-3 border-t border-border flex items-center justify-between shrink-0">
+              <div className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
                 Total Workload:{' '}
-                <span className="text-zinc-200 font-semibold tabular-nums">{totalEstHours}h</span>
+                <span className="text-zinc-900 dark:text-zinc-200 font-semibold tabular-nums">{totalEstHours}h</span>
               </div>
 
               <button
                 type="button"
                 onClick={handlePublishAll}
-                disabled={isPublishing || !canExtractAndPublish || publishSuccess}
-                className="inline-flex items-center space-x-2 text-xs font-semibold px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors"
+                disabled={isPublishing || !canExtractAndPublish}
+                className="inline-flex items-center space-x-2 text-xs font-medium px-4 py-2 rounded-md bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors cursor-pointer shadow-xs"
               >
                 {isPublishing ? (
                   <>
                     <Loader2 size={13} className="animate-spin" />
-                    <span>Publishing Tasks...</span>
-                  </>
-                ) : publishSuccess ? (
-                  <>
-                    <CheckCircle2 size={13} className="text-emerald-400" />
-                    <span>Published to Board</span>
+                    <span>Publishing to Database...</span>
                   </>
                 ) : (
                   <>
-                    <CheckCircle2 size={13} />
-                    <span>Approve & Publish All</span>
+                    <span>Publish All to Task Board</span>
+                    <ArrowRight size={13} strokeWidth={1.75} />
                   </>
                 )}
               </button>
