@@ -33,14 +33,14 @@ app = FastAPI(
 )
 
 # CORS Middleware
-origins = list(ALLOWED_ORIGINS)
-for default_origin in ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000", "http://127.0.0.1:3000"]:
-    if default_origin not in origins:
-        origins.append(default_origin)
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://smart-corp-ai.vercel.app",
+    ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

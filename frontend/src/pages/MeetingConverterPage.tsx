@@ -18,8 +18,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { DraftTask } from '../types';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+import { API_BASE_URL } from '../config';
 
 const SAMPLE_MEETING_NOTES = `Sprint Planning & Operations Sync — Q4 Deliverables
 Date: Nov 24, 2026 | Attendees: Anush (Admin), Nicholas (Manager), Sidharth (HR), Hitesh (Employee)

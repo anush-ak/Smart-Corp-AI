@@ -7,7 +7,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from backend.database import engine, SessionLocal, Base
 from backend.models import Organization, User, Project, Task, Document, AuditEvent
-from backend.auth import get_password_hash
+from backend.auth import get_password_hash, hash_password
 
 
 def seed_database():
@@ -77,7 +77,8 @@ def seed_database():
                 user.name = u_data["name"]
                 user.role = u_data["role"]
                 user.department = u_data["department"]
-                user.hashed_password = hashed_pwd
+                user.password_hash = hash_password("password123")
+                user.hashed_password = user.password_hash
                 user.is_active = True
                 db.commit()
                 db.refresh(user)
@@ -373,7 +374,8 @@ def seed_database():
                 user.name = u_data["name"]
                 user.role = u_data["role"]
                 user.department = u_data["department"]
-                user.hashed_password = hashed_pwd
+                user.password_hash = hash_password("password123")
+                user.hashed_password = user.password_hash
                 user.is_active = True
                 db.commit()
                 db.refresh(user)

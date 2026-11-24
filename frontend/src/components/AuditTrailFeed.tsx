@@ -13,14 +13,13 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { AuditEvent } from '../types';
+import { API_BASE_URL } from '../config';
 
 interface AuditTrailFeedProps {
   className?: string;
   showTitle?: boolean;
   maxEvents?: number;
 }
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export const AuditTrailFeed: React.FC<AuditTrailFeedProps> = ({
   className = '',

@@ -1,9 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, AuthResponse, AuthContextType } from '../types';
+import { API_BASE_URL } from '../config';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
@@ -75,7 +74,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Invalid email or password');
+        const message = errorData.detail || (response.status === 401 ? 'Invalid email or password' : `Server error (${response.status})`);
+        const err = new Error(message);
+        (err as any).status = response.status;
+        throw err;
       }
 
       const data: AuthResponse = await response.json();

@@ -112,7 +112,11 @@ export const LoginPage: React.FC = () => {
       await login(email, password);
       navigate('/');
     } catch (err: any) {
-      setErrorMessage(err.message || 'Invalid credentials');
+      if (err?.status === 401) {
+        setErrorMessage('Invalid email or password');
+      } else {
+        setErrorMessage(err?.message || 'Network error: could not connect to backend');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -128,7 +132,11 @@ export const LoginPage: React.FC = () => {
       await login(account.email, account.password);
       navigate('/');
     } catch (err: any) {
-      setErrorMessage(err.message || 'Quick login failed');
+      if (err?.status === 401) {
+        setErrorMessage('Invalid email or password');
+      } else {
+        setErrorMessage(err?.message || 'Network error: could not connect to backend');
+      }
     } finally {
       setIsSubmitting(false);
     }

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-
-const WS_BASE_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
+import { WS_BASE_URL } from '../config';
 
 export interface WebSocketMessage<T = any> {
   type: 'TASK_UPDATED' | 'AUDIT_EVENT' | string;
