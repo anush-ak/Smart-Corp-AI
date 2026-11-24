@@ -339,19 +339,12 @@ def get_audit_events(
 
 @app.on_event("startup")
 def on_startup():
-    # 1. Verify Acme Corp team (Anush, Sidharth, Nicholas, Hitesh) exists in database; if not, re-seed
+    # 1. Automatically seed/update Acme Corp users (Anush, Sidharth, Nicholas, Hitesh) with password123 on startup
     try:
-        db_check = SessionLocal()
-        try:
-            anush_user = db_check.query(User).filter(User.email == "anush@acmecorp.com").first()
-            if not anush_user:
-                print("Anush user not found in Acme Corp: Auto-seeding custom team accounts...")
-                from backend.seed import seed_database
-                seed_database()
-        finally:
-            db_check.close()
-    except Exception as user_seed_err:
-        print(f"Startup user verification/seed error: {user_seed_err}")
+        from backend.seed import seed_database
+        seed_database()
+    except Exception as seed_err:
+        print(f"Startup database seeding error: {seed_err}")
 
     # 2. Check if ChromaDB collection is empty for Org 1; if so, auto-ingest demo documents
     try:
