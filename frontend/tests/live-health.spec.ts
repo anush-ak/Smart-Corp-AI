@@ -273,7 +273,7 @@ test.describe('SmartCorp AI Live Health Suite', () => {
 
     // Confirm tasks persist on the Kanban board
     await expect(page.getByText('Live Task Board')).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText('To Do', { exact: true })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('To Do', { exact: true }).first()).toBeVisible({ timeout: 15000 });
 
     // Verify task cards exist
     const taskTitles = page.locator('h4');
@@ -332,5 +332,46 @@ test.describe('SmartCorp AI Live Health Suite', () => {
       await expect(html).toHaveClass(/light/);
       console.log('PASS: Theme switched back to Light (html has class "light").');
     }
+  });
+
+  /**
+   * Module 6: Upgraded Modules (Email Writer, Smart Calendar, Leave Management, Team & Settings)
+   */
+  test('Module 6: New Modules Live Availability', async ({ page }) => {
+    console.log('\n--- Testing Module 6: New Modules Live Availability ---');
+    const apiErrors: string[] = [];
+    page.on('response', (res) => {
+      if (res.status() >= 400 && res.url().includes('/api/')) {
+        apiErrors.push(`${res.status()} on ${res.url()}`);
+      }
+    });
+
+    await login(page, ACCOUNTS.anush.email, ACCOUNTS.anush.password);
+
+    // 1. AI Email Writer
+    await page.goto(`${BASE_URL}/email-writer`);
+    await expect(page.getByText('AI Email & Message Writer').first()).toBeVisible({ timeout: 15000 });
+
+    // 2. Smart Calendar
+    await page.goto(`${BASE_URL}/calendar`);
+    await expect(page.getByText('Smart Calendar').first()).toBeVisible({ timeout: 15000 });
+
+    // 3. Company Brain
+    await page.goto(`${BASE_URL}/knowledge`);
+    await expect(page.getByText('Company Brain').first()).toBeVisible({ timeout: 15000 });
+
+    // 4. Leave Management
+    await page.goto(`${BASE_URL}/leaves`);
+    await expect(page.getByText('Leave Management').first()).toBeVisible({ timeout: 15000 });
+
+    // 5. Team & Settings
+    await page.goto(`${BASE_URL}/team`);
+    await expect(page.getByText('Team Management').first()).toBeVisible({ timeout: 15000 });
+
+    await page.goto(`${BASE_URL}/settings`);
+    await expect(page.getByText('Profile & Settings').first()).toBeVisible({ timeout: 15000 });
+
+    expect(apiErrors).toEqual([]);
+    console.log('PASS: All upgraded modules loaded on Vercel & Render with zero API errors.');
   });
 });
