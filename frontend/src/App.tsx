@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { LayoutProvider } from './components/ui/LayoutContext';
 import { Sidebar } from './components/Sidebar';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -9,6 +10,11 @@ import { KnowledgeChatPage } from './pages/KnowledgeChatPage';
 import { MeetingConverterPage } from './pages/MeetingConverterPage';
 import { TaskBoardPage } from './pages/TaskBoardPage';
 import { AuditTrailPage } from './pages/AuditTrailPage';
+import { EmailWriterPage } from './pages/EmailWriterPage';
+import { SmartCalendarPage } from './pages/SmartCalendarPage';
+import { LeaveManagementPage } from './pages/LeaveManagementPage';
+import { TeamManagementPage } from './pages/TeamManagementPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { Loader2 } from 'lucide-react';
 import { Role } from './types';
 
@@ -19,7 +25,7 @@ const ProtectedLayout: React.FC = () => {
     return (
       <div className="h-screen w-screen bg-canvas flex flex-col items-center justify-center space-y-3">
         <Loader2 size={24} className="animate-spin text-indigo-500" strokeWidth={1.75} />
-        <span className="text-xs text-zinc-500 font-mono">Loading workspace...</span>
+        <span className="text-xs text-text-muted font-mono">Loading workspace...</span>
       </div>
     );
   }
@@ -29,12 +35,14 @@ const ProtectedLayout: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-canvas text-zinc-900 dark:text-zinc-100">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Outlet />
+    <LayoutProvider>
+      <div className="flex h-screen w-screen overflow-hidden bg-canvas text-text-primary">
+        <Sidebar />
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+          <Outlet />
+        </div>
       </div>
-    </div>
+    </LayoutProvider>
   );
 };
 
@@ -62,7 +70,10 @@ export const App: React.FC = () => {
             {/* Protected Application Shell */}
             <Route element={<ProtectedLayout />}>
               <Route path="/" element={<DashboardPage />} />
+              <Route path="/tasks" element={<TaskBoardPage />} />
+              <Route path="/calendar" element={<SmartCalendarPage />} />
               <Route path="/knowledge" element={<KnowledgeChatPage />} />
+              <Route path="/company-brain" element={<Navigate to="/knowledge" replace />} />
               <Route
                 path="/meetings"
                 element={
@@ -71,7 +82,9 @@ export const App: React.FC = () => {
                   </RoleRoute>
                 }
               />
-              <Route path="/tasks" element={<TaskBoardPage />} />
+              <Route path="/email-writer" element={<EmailWriterPage />} />
+              <Route path="/leaves" element={<LeaveManagementPage />} />
+              <Route path="/team" element={<TeamManagementPage />} />
               <Route
                 path="/audit"
                 element={
@@ -80,6 +93,8 @@ export const App: React.FC = () => {
                   </RoleRoute>
                 }
               />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/profile" element={<SettingsPage />} />
             </Route>
 
             {/* Catch-all */}

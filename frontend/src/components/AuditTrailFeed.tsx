@@ -161,10 +161,10 @@ export const AuditTrailFeed: React.FC<AuditTrailFeedProps> = ({
     >
       {/* Panel Header */}
       {showTitle && (
-        <div className="h-14 px-4 border-b border-border flex items-center justify-between shrink-0 bg-surface/80 backdrop-blur">
+        <div className="h-14 px-4 border-b border-border flex items-center justify-between shrink-0 bg-surface">
           <div className="flex items-center space-x-2">
-            <ShieldCheck size={15} className="text-indigo-600 dark:text-indigo-400" strokeWidth={1.75} />
-            <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
+            <ShieldCheck size={15} className="text-indigo-500" strokeWidth={1.75} />
+            <h3 className="text-xs font-semibold text-text-primary uppercase tracking-wider">
               Tenant Audit Trail
             </h3>
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
@@ -175,11 +175,11 @@ export const AuditTrailFeed: React.FC<AuditTrailFeedProps> = ({
             onClick={fetchAuditEvents}
             disabled={isLoading}
             title="Refresh Audit Trail"
-            className="p-1.5 rounded-md text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.04] transition-colors disabled:opacity-50 cursor-pointer"
+            className="p-1.5 rounded-md text-text-muted hover:text-text-primary hover:bg-subtle transition-colors disabled:opacity-50 cursor-pointer"
           >
             <RotateCw
               size={13}
-              className={isLoading ? 'animate-spin text-indigo-600 dark:text-indigo-400' : ''}
+              className={isLoading ? 'animate-spin text-indigo-500' : ''}
               strokeWidth={1.75}
             />
           </button>

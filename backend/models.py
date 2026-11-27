@@ -5,6 +5,7 @@ from sqlalchemy import (
     Text,
     Float,
     Boolean,
+    Date,
     DateTime,
     ForeignKey,
 )
@@ -27,6 +28,9 @@ class Organization(Base):
     tasks = relationship("Task", back_populates="organization", cascade="all, delete-orphan")
     documents = relationship("Document", back_populates="organization", cascade="all, delete-orphan")
     audit_events = relationship("AuditEvent", back_populates="organization", cascade="all, delete-orphan")
+    calendar_events = relationship("CalendarEvent", back_populates="organization", cascade="all, delete-orphan")
+    leave_balances = relationship("LeaveBalance", back_populates="organization", cascade="all, delete-orphan")
+    leave_requests = relationship("LeaveRequest", back_populates="organization", cascade="all, delete-orphan")
 
 
 class User(Base):
@@ -120,3 +124,65 @@ class AuditEvent(Base):
     # Relationships
     organization = relationship("Organization", back_populates="audit_events")
     user = relationship("User", back_populates="audit_events")
+
+
+class CalendarEvent(Base):
+    __tablename__ = "calendar_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    org_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    category = Column(String(50), default="meeting", nullable=False)  # meeting, deadline, review, company, focus
+    start_time = Column(DateTime(timezone=True), nullable=False, index=True)
+    end_time = Column(DateTime(timezone=True), nullable=False)
+    all_day = Column(Boolean, default=False, nullable=False)
+    location = Column(String(255), nullable=True)
+    attendees = Column(Text, nullable=True)  # JSON-encoded list of attendee names/emails
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    # Relationships
+    organization = relationship("Organization", back_populates="calendar_events")
+    creator = relationship("User", foreign_keys=[created_by])
+
+
+class LeaveBalance(Base):
+    __tablename__ = "leave_balances"
+
+    id = Column(Integer, primary_key=True, index=True)
+    org_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    leave_type = Column(String(50), nullable=False)  # Casual Leave, Sick Leave, Earned Leave, Unpaid Leave
+    year = Column(Integer, nullable=False, index=True)
+    total_days = Column(Float, nullable=False)
+    used_days = Column(Float, default=0.0, nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    # Relationships
+    organization = relationship("Organization", back_populates="leave_balances")
+    user = relationship("User", foreign_keys=[user_id])
+
+
+class LeaveRequest(Base):
+    __tablename__ = "leave_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    org_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    leave_type = Column(String(50), nullable=False)
+    start_date = Column(Date, nullable=False, index=True)
+    end_date = Column(Date, nullable=False, index=True)
+    days_count = Column(Float, nullable=False)
+    reason = Column(Text, nullable=False)
+    status = Column(String(30), default="Pending", nullable=False, index=True)  # Pending, Approved, Rejected, Cancelled
+    reviewed_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    review_note = Column(Text, nullable=True)
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    # Relationships
+    organization = relationship("Organization", back_populates="leave_requests")
+    employee = relationship("User", foreign_keys=[user_id])
+    reviewer = relationship("User", foreign_keys=[reviewed_by])

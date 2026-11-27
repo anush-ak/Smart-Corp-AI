@@ -6,8 +6,116 @@ from datetime import datetime, timedelta, timezone
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from backend.database import engine, SessionLocal, Base
-from backend.models import Organization, User, Project, Task, Document, AuditEvent
+from backend.models import (
+    Organization,
+    User,
+    Project,
+    Task,
+    Document,
+    AuditEvent,
+    CalendarEvent,
+    LeaveBalance,
+    LeaveRequest,
+)
 from backend.auth import get_password_hash, hash_password
+
+DEFAULT_LEAVE_QUOTAS = {
+    "Casual Leave": 12.0,
+    "Sick Leave": 10.0,
+    "Earned Leave": 15.0,
+}
+
+
+def ensure_new_feature_defaults(db=None):
+    """
+    Non-destructively initialize initial LeaveBalance quotas (for users who have none)
+    and starter CalendarEvent records (for orgs with 0 calendar events).
+    Safe to run on every startup without overwriting production data.
+    """
+    own_session = db is None
+    if own_session:
+        db = SessionLocal()
+    try:
+        current_year = datetime.now(timezone.utc).year
+        now = datetime.now(timezone.utc)
+        orgs = db.query(Organization).all()
+
+        for org in orgs:
+            users = db.query(User).filter(User.org_id == org.id, User.is_active == True).all()
+            for u in users:
+                existing_bal = (
+                    db.query(LeaveBalance)
+                    .filter(
+                        LeaveBalance.org_id == org.id,
+                        LeaveBalance.user_id == u.id,
+                        LeaveBalance.year == current_year,
+                    )
+                    .count()
+                )
+                if existing_bal == 0:
+                    for leave_type, quota in DEFAULT_LEAVE_QUOTAS.items():
+                        db.add(
+                            LeaveBalance(
+                                org_id=org.id,
+                                user_id=u.id,
+                                leave_type=leave_type,
+                                year=current_year,
+                                total_days=quota,
+                                used_days=0.0,
+                            )
+                        )
+
+            existing_cal = db.query(CalendarEvent).filter(CalendarEvent.org_id == org.id).count()
+            if existing_cal == 0 and users:
+                lead = next((u for u in users if u.role in ("Admin", "Manager")), users[0])
+                today_start = now.replace(hour=10, minute=0, second=0, microsecond=0)
+                starter_events = [
+                    CalendarEvent(
+                        org_id=org.id,
+                        created_by=lead.id,
+                        title=f"{org.name} Weekly Operations Sync",
+                        description="Cross-functional delivery alignment, blocker triage, and sprint velocity review.",
+                        category="meeting",
+                        start_time=today_start + timedelta(days=1),
+                        end_time=today_start + timedelta(days=1, hours=1),
+                        all_day=False,
+                        location="Executive War Room / Meet",
+                        attendees=f'["{lead.name}"]',
+                    ),
+                    CalendarEvent(
+                        org_id=org.id,
+                        created_by=lead.id,
+                        title="Security & Compliance Checkpoint",
+                        description="Quarterly policy verification and access governance audit.",
+                        category="review",
+                        start_time=today_start + timedelta(days=3, hours=4),
+                        end_time=today_start + timedelta(days=3, hours=5),
+                        all_day=False,
+                        location="Governance Channel",
+                        attendees=f'["{lead.name}"]',
+                    ),
+                    CalendarEvent(
+                        org_id=org.id,
+                        created_by=lead.id,
+                        title="All-Hands Product & People Townhall",
+                        description="Company-wide roadmap milestones and People Ops updates.",
+                        category="company",
+                        start_time=today_start + timedelta(days=6, hours=1),
+                        end_time=today_start + timedelta(days=6, hours=2, minutes=30),
+                        all_day=False,
+                        location="Main Auditorium / Livestream",
+                        attendees="[]",
+                    ),
+                ]
+                db.add_all(starter_events)
+
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"ensure_new_feature_defaults warning: {e}")
+    finally:
+        if own_session:
+            db.close()
 
 
 def seed_database():
@@ -606,6 +714,7 @@ def seed_database():
             db.commit()
             print("  Created audit events for Globex Labs")
 
+        ensure_new_feature_defaults(db)
         print("\nAll database tables successfully seeded for multi-tenant organizations!")
     except Exception as e:
         print(f"Error seeding database: {e}")

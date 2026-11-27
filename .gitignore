@@ -35,3 +35,10 @@ yarn-error.log*
 Thumbs.db
 .vscode/
 .idea/
+
+# Playwright artifacts
+test-results/
+frontend/test-results/
+playwright-report/
+frontend/playwright-report/
+

@@ -76,7 +76,7 @@ export const CitationPopover: React.FC<CitationPopoverProps> = ({
           ref={popoverRef}
           role="dialog"
           aria-label="Verified Source Chunk"
-          className="absolute z-50 bottom-full left-0 mb-2 w-80 sm:w-96 rounded-lg bg-surface border border-border shadow-2xl p-3.5 text-xs text-zinc-800 dark:text-zinc-200 animate-in fade-in zoom-in-95 duration-100"
+          className="absolute z-50 bottom-full left-0 mb-2 w-80 sm:w-96 rounded-lg bg-elevated border border-border shadow-2xl p-3.5 text-xs text-text-primary"
           style={{
             maxWidth: 'calc(100vw - 32px)',
           }}

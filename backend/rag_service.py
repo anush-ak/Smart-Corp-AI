@@ -258,3 +258,134 @@ def ask_knowledge_base(question: str, org_id: int) -> Dict[str, Any]:
         "answer": answer_text,
         "citations": citations,
     }
+
+
+def search_knowledge_chunks(query: str, org_id: int, n_results: int = 6) -> List[Dict[str, Any]]:
+    """
+    Semantic search across tenant-isolated ChromaDB chunks.
+    Strictly enforces where={"org_id": int(org_id)}.
+    """
+    clean_q = query.strip()
+    if not clean_q:
+        return []
+    try:
+        results = collection.query(
+            query_texts=[clean_q],
+            n_results=n_results,
+            where={"org_id": int(org_id)},
+        )
+    except Exception as e:
+        print(f"ChromaDB search error: {e}")
+        return []
+
+    docs = results.get("documents", [[]])[0] if results else []
+    metas = results.get("metadatas", [[]])[0] if results else []
+    ids = results.get("ids", [[]])[0] if results else []
+    distances = results.get("distances", [[]])[0] if results else []
+
+    matches: List[Dict[str, Any]] = []
+    for idx, (doc_id, meta, doc_text) in enumerate(zip(ids, metas, docs)):
+        dist = float(distances[idx]) if idx < len(distances) else 1.0
+        if dist > 0.9:
+            continue
+        score = max(0.0, min(1.0, round(1.0 - dist, 2)))
+        matches.append({
+            "id": doc_id,
+            "filename": meta.get("filename", "Unknown"),
+            "page": int(meta.get("page", 1)),
+            "excerpt": doc_text,
+            "relevance": score,
+        })
+    return matches
+
+
+def get_document_pages_from_store(filename: str, org_id: int, file_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    Retrieve page-by-page text for a tenant document, reading from the PDF on disk
+    when present and falling back to indexed ChromaDB chunks for that tenant & filename.
+    """
+    if file_path and os.path.exists(file_path):
+        try:
+            reader = pypdf.PdfReader(file_path)
+            pages = []
+            for page_idx, page in enumerate(reader.pages, start=1):
+                txt = (page.extract_text() or "").strip()
+                if txt:
+                    pages.append({"page": page_idx, "content": txt})
+            if pages:
+                return pages
+        except Exception as e:
+            print(f"PDF direct read fallback to ChromaDB: {e}")
+
+    try:
+        results = collection.get(
+            where={"$and": [{"org_id": int(org_id)}, {"filename": filename}]}
+        )
+        docs = results.get("documents", []) or []
+        metas = results.get("metadatas", []) or []
+        page_map: Dict[int, List[str]] = {}
+        for doc_text, meta in zip(docs, metas):
+            pg = int((meta or {}).get("page", 1))
+            page_map.setdefault(pg, []).append(doc_text.strip())
+        return [
+            {"page": pg, "content": "\n\n".join(chunks)}
+            for pg, chunks in sorted(page_map.items())
+        ]
+    except Exception as e:
+        print(f"ChromaDB get document pages error: {e}")
+        return []
+
+
+def summarize_document(filename: str, title: str, org_id: int, file_path: Optional[str] = None) -> str:
+    """
+    Generate a concise grounded summary of a single tenant-isolated document.
+    """
+    pages = get_document_pages_from_store(filename=filename, org_id=org_id, file_path=file_path)
+    if not pages:
+        return "No indexed text is currently available to summarize for this document."
+
+    combined = "\n\n".join(f"[Page {p['page']}]\n{p['content']}" for p in pages[:6])
+    if len(combined) > 7000:
+        combined = combined[:7000]
+
+    prompt = (
+        f"You are SmartCorp Company Brain. Summarize the official company document '{title}' ({filename}) "
+        "in 4-6 concise, structured bullet points using ONLY the provided text. "
+        "Include page references like [Page X] where helpful.\n\n"
+        f"Document Content:\n{combined}\n\nSummary:"
+    )
+
+    active_key = os.getenv("GEMINI_API_KEY") or GEMINI_API_KEY
+    if active_key:
+        try:
+            try:
+                genai.configure(api_key=active_key, transport="rest")
+            except Exception:
+                genai.configure(api_key=active_key)
+
+            for model_name in ("gemini-2.5-flash", "gemini-2.0-flash"):
+                try:
+                    model = genai.GenerativeModel(model_name)
+                    response = model.generate_content(
+                        prompt,
+                        generation_config=genai.types.GenerationConfig(
+                            temperature=0.1,
+                            max_output_tokens=600,
+                        ),
+                        request_options={"timeout": 8},
+                    )
+                    if response and response.text:
+                        return response.text.strip()
+                except Exception:
+                    continue
+        except Exception as e:
+            print(f"Document summarize Gemini warning: {e}")
+
+    # Deterministic fallback summary from first sentences of each page
+    bullets = []
+    for p in pages[:5]:
+        snippet = p["content"].replace("\n", " ").strip()
+        if len(snippet) > 200:
+            snippet = snippet[:197] + "..."
+        bullets.append(f"- {snippet} [Page {p['page']}]")
+    return f"Executive Summary of {title}:\n\n" + "\n".join(bullets)

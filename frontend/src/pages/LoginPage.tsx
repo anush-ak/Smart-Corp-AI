@@ -145,13 +145,13 @@ export const LoginPage: React.FC = () => {
   const filteredDemoAccounts = DEMO_ACCOUNTS.filter((acc) => acc.org === selectedOrg);
 
   return (
-    <div className="min-h-screen w-full bg-canvas flex flex-col justify-center items-center p-4 selection:bg-indigo-500/20 selection:text-indigo-200 relative transition-colors">
+    <div className="min-h-screen w-full bg-canvas text-text-primary flex flex-col justify-center items-center p-4 selection:bg-indigo-500/20 relative transition-colors">
       {/* Sleek Theme Switcher (Top-right corner) */}
       <div className="absolute top-4 right-4 z-10">
         <button
           type="button"
           onClick={toggleTheme}
-          className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-surface border border-border shadow-xs text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-elevated transition-colors cursor-pointer"
+          className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-surface border border-border text-xs font-medium text-text-muted hover:text-text-primary hover:bg-elevated transition-colors cursor-pointer"
           title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
         >
           {theme === 'dark' ? (
@@ -168,23 +168,23 @@ export const LoginPage: React.FC = () => {
         </button>
       </div>
 
-      <div className="w-full max-w-[420px] space-y-6">
+      <div className="w-full max-w-[440px] space-y-6">
         {/* Brand Header */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-surface border border-border shadow-xs mb-1">
-            <span className="font-semibold text-sm text-indigo-600 dark:text-indigo-400">SC</span>
+          <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-indigo-600 text-white font-semibold text-sm mb-1">
+            SC
           </div>
-          <h1 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">SmartCorp AI</h1>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto">
-            Autonomous multi-tenant enterprise operations copilot
+          <h1 className="text-xl font-semibold tracking-tight text-text-primary">SmartCorp AI</h1>
+          <p className="text-xs text-text-muted max-w-sm mx-auto">
+            Enterprise operations, company brain, smart calendar & people workflows
           </p>
         </div>
 
         {/* Main Card */}
-        <div className="bg-surface border border-border rounded-xl p-6 shadow-xl space-y-5">
+        <div className="bg-surface border border-border rounded-xl p-6 space-y-5">
           <div className="flex items-center justify-between pb-3 border-b border-border">
-            <span className="text-xs font-medium text-zinc-800 dark:text-zinc-200">Sign in to workspace</span>
-            <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">HS256 JWT</span>
+            <span className="text-xs font-medium text-text-primary">Sign in to workspace</span>
+            <span className="text-[10px] font-mono text-text-muted uppercase tracking-wider">HS256 JWT</span>
           </div>
 
           {errorMessage && (

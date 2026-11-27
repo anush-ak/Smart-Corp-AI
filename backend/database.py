@@ -20,7 +20,7 @@ def get_resolved_db_url(url_str: str) -> str:
         query_dict = urllib.parse.parse_qs(parsed.query)
         if "hostaddr" not in query_dict:
             ip = None
-            candidate_ips = ["23.23.139.245", "100.52.73.92", "44.218.206.133"]
+            candidate_ips = ["100.52.73.92", "44.218.206.133", "23.23.139.245"]
             for cand in candidate_ips:
                 try:
                     sock = socket.socket()

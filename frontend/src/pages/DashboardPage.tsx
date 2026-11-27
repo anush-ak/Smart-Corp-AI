@@ -28,6 +28,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { AuditTrailFeed } from '../components/AuditTrailFeed';
+import { PageHeader, Badge, Button, ErrorBanner } from '../components/ui/Primitives';
 import { DashboardSummary, TeamWorkloadMember } from '../types';
 import { API_BASE_URL } from '../config';
 
@@ -50,10 +51,10 @@ export const DashboardPage: React.FC = () => {
   const [isAuditPanelOpen, setIsAuditPanelOpen] = useState<boolean>(true);
 
   // Dynamic Recharts Theme-Aware Colors
-  const axisStroke = isDark ? '#52525B' : '#D4D4D8';
-  const axisTickColor = isDark ? '#A1A1AA' : '#52525B';
-  const axisTickLine = isDark ? '#27272A' : '#E4E4E7';
-  const baselineBarFill = isDark ? '#52525B' : '#94A3B8';
+  const axisStroke = isDark ? '#334155' : '#CBD5E1';
+  const axisTickColor = isDark ? '#94A3B8' : '#64748B';
+  const axisTickLine = isDark ? '#252B36' : '#E2E8F0';
+  const baselineBarFill = isDark ? '#475569' : '#94A3B8';
 
   // What-If Simulation State
   const [employeeAId, setEmployeeAId] = useState<number | null>(null);
@@ -181,81 +182,56 @@ export const DashboardPage: React.FC = () => {
   const canViewAudit = user?.role === 'Admin' || user?.role === 'Manager';
 
   return (
-    <div className="flex-1 flex flex-col h-screen overflow-hidden bg-canvas text-zinc-900 dark:text-zinc-100 transition-colors">
-      {/* Control Tower Header */}
-      <header className="h-14 border-b border-border px-6 flex items-center justify-between shrink-0 bg-surface/80 backdrop-blur z-10">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-            <SlidersHorizontal size={16} strokeWidth={1.75} />
-          </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <h1 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
-                Control Tower Executive Analytics
-              </h1>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                Phase 2 Active
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-3">
-          <div className="hidden sm:flex items-center space-x-2 text-xs font-mono text-zinc-500 dark:text-zinc-400 bg-subtle border border-border px-3 py-1.5 rounded-md">
-            <span className="text-zinc-400 dark:text-zinc-500">Tenant:</span>
-            <span className="text-zinc-800 dark:text-zinc-200 font-medium">{user?.org_name}</span>
-          </div>
-
-          <button
-            onClick={fetchSummary}
-            disabled={isLoading}
-            title="Refresh Analytics"
-            className="p-1.5 rounded-md text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.04] transition-colors border border-border cursor-pointer"
-          >
-            <RotateCw
-              size={14}
-              className={isLoading ? 'animate-spin text-indigo-600 dark:text-indigo-400' : ''}
-              strokeWidth={1.75}
-            />
-          </button>
-
-          {canViewAudit && (
-            <button
-              onClick={() => setIsAuditPanelOpen((prev) => !prev)}
-              className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-zinc-700 dark:text-zinc-300 bg-subtle hover:bg-elevated transition-colors border border-border cursor-pointer"
-              title={isAuditPanelOpen ? 'Collapse Audit Trail' : 'Expand Audit Trail'}
+    <div className="flex-1 flex flex-col h-screen overflow-hidden bg-canvas text-text-primary transition-colors">
+      <PageHeader
+        title="Control Tower Executive Analytics"
+        subtitle="Real-time deterministic delivery metrics & workload simulation"
+        icon={SlidersHorizontal}
+        badge={<Badge tone="emerald">Live Telemetry</Badge>}
+        actions={
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={fetchSummary}
+              disabled={isLoading}
+              title="Refresh Analytics"
             >
-              {isAuditPanelOpen ? (
-                <>
-                  <PanelRightClose size={14} strokeWidth={1.75} />
-                  <span className="hidden md:inline text-[11px]">Hide Audit</span>
-                </>
-              ) : (
-                <>
-                  <PanelRightOpen size={14} strokeWidth={1.75} />
-                  <span className="hidden md:inline text-[11px]">Audit Feed</span>
-                </>
-              )}
-            </button>
-          )}
-        </div>
-      </header>
+              <RotateCw
+                size={13}
+                className={isLoading ? 'animate-spin text-indigo-500' : ''}
+                strokeWidth={1.75}
+              />
+            </Button>
+            {canViewAudit && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setIsAuditPanelOpen((prev) => !prev)}
+                title={isAuditPanelOpen ? 'Collapse Audit Trail' : 'Expand Audit Trail'}
+              >
+                {isAuditPanelOpen ? (
+                  <>
+                    <PanelRightClose size={13} strokeWidth={1.75} />
+                    <span className="hidden md:inline">Hide Audit</span>
+                  </>
+                ) : (
+                  <>
+                    <PanelRightOpen size={13} strokeWidth={1.75} />
+                    <span className="hidden md:inline">Audit Feed</span>
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        }
+      />
 
       {/* Main Workspace Body with Optional Right-Hand Audit Panel */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left/Center Dashboard Grid Area */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {error && (
-            <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs flex items-center justify-between">
-              <span>{error}</span>
-              <button
-                onClick={fetchSummary}
-                className="underline hover:text-rose-700 dark:hover:text-rose-300 font-mono text-[11px] cursor-pointer"
-              >
-                Retry
-              </button>
-            </div>
-          )}
+        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
+          {error && <ErrorBanner message={error} onRetry={fetchSummary} />}
 
           {/* 1. Top 4-Column KPI Strip */}
           <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -677,7 +653,7 @@ export const DashboardPage: React.FC = () => {
                   ))}
                 </select>
                 <div className="text-[10px] text-zinc-500 font-mono">
-                  Recipient recipient buffer
+                  Target capacity receiver
                 </div>
               </div>
             </div>
@@ -869,9 +845,9 @@ export const DashboardPage: React.FC = () => {
 
         {/* Right-Hand Docked Audit Trail Feed Panel (Visible for Admin and Manager) */}
         {canViewAudit && isAuditPanelOpen && (
-          <aside className="w-80 xl:w-96 shrink-0 h-full hidden lg:block">
+          <div role="complementary" aria-label="Tenant Audit Trail" className="w-80 xl:w-96 shrink-0 h-full hidden lg:block">
             <AuditTrailFeed className="h-full" />
-          </aside>
+          </div>
         )}
       </div>
     </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  BookOpen,
+  BrainCircuit,
   Upload,
   FileText,
   Send,
@@ -11,12 +11,23 @@ import {
   ArrowRight,
   Shield,
   Layers,
+  Search,
+  AlignLeft,
+  Download,
+  BookOpen,
   X,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { CitationPopover } from '../components/CitationPopover';
-import { DocumentItem, Citation, ChatMessage } from '../types';
+import {
+  DocumentItem,
+  DocumentDetail,
+  KnowledgeSearchResult,
+  Citation,
+  ChatMessage,
+} from '../types';
 import { API_BASE_URL } from '../config';
+import { PageHeader, Button, Badge, Modal, ErrorBanner } from '../components/ui/Primitives';
 
 interface PromptChip {
   label: string;
@@ -29,20 +40,24 @@ const PROMPT_CHIPS: PromptChip[] = [
     query: 'Summarize the SmartCorp annual PTO leave accrual, rollover limit, and notice requirements.',
   },
   {
+    label: 'Company Leave Policy',
+    query: 'What is our company leave policy?',
+  },
+  {
     label: 'Remote Work Rules',
     query: 'What are the remote and hybrid work eligibility rules, anchor days, and core working hours?',
   },
   {
-    label: 'Approval & Escalation Policy',
-    query: 'What is the required notice period and manager approval timeline for taking leave?',
+    label: 'Employee Onboarding Process',
+    query: 'Summarize the employee onboarding process and orientation guidelines.',
   },
   {
-    label: 'Parental Leave Benefits',
-    query: 'What are the parental leave entitlements for primary and secondary caregivers?',
+    label: 'HR Department Responsibilities',
+    query: 'What are the responsibilities of the HR department regarding leave, approvals, and policy compliance?',
   },
   {
-    label: 'Home Office Stipend',
-    query: 'What equipment stipends and monthly connectivity allowances do remote employees receive?',
+    label: 'Project Workflow Docs',
+    query: 'Which documents explain our project workflow, hybrid collaboration, and approval guidelines?',
   },
 ];
 
@@ -53,6 +68,20 @@ export const KnowledgeChatPage: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputQuery, setInputQuery] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // Search state
+  const [docSearch, setDocSearch] = useState<string>('');
+  const [searchResults, setSearchResults] = useState<KnowledgeSearchResult | null>(null);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
+
+  // Document Inspector Modal
+  const [inspectedDoc, setInspectedDoc] = useState<DocumentDetail | null>(null);
+  const [isLoadingDocDetail, setIsLoadingDocDetail] = useState<boolean>(false);
+  const [docSummary, setDocSummary] = useState<string | null>(null);
+  const [isSummarizing, setIsSummarizing] = useState<boolean>(false);
+  const [docError, setDocError] = useState<string | null>(null);
+
+  // Upload PDF Modal
   const [uploadModalOpen, setUploadModalOpen] = useState<boolean>(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadTitle, setUploadTitle] = useState<string>('');
@@ -65,15 +94,12 @@ export const KnowledgeChatPage: React.FC = () => {
 
   const canUpload = user?.role === 'Admin' || user?.role === 'HR';
 
-  // Fetch tenant-isolated documents
   const fetchDocuments = async () => {
     if (!token) return;
     try {
       setIsLoadingDocs(true);
       const res = await fetch(`${API_BASE_URL}/api/documents`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         const data: DocumentItem[] = await res.json();
@@ -94,7 +120,108 @@ export const KnowledgeChatPage: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isSubmitting]);
 
-  // Execute knowledge ask query
+  // Semantic + metadata search across Company Brain
+  const handleSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const q = docSearch.trim();
+    if (!q || !token) {
+      setSearchResults(null);
+      return;
+    }
+    setIsSearching(true);
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/api/documents/search?q=${encodeURIComponent(q)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.ok) {
+        const data: KnowledgeSearchResult = await res.json();
+        setSearchResults(data);
+      }
+    } catch (err) {
+      console.error('Knowledge search failed:', err);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const clearSearch = () => {
+    setDocSearch('');
+    setSearchResults(null);
+  };
+
+  // Open Document Viewer
+  const openDocumentInspector = async (docId: number) => {
+    if (!token) return;
+    setIsLoadingDocDetail(true);
+    setDocSummary(null);
+    setDocError(null);
+    setInspectedDoc(null);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/documents/${docId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || `Failed to load document (${res.status})`);
+      }
+      const data: DocumentDetail = await res.json();
+      setInspectedDoc(data);
+    } catch (err: any) {
+      setDocError(err.message || 'Unable to open document.');
+    } finally {
+      setIsLoadingDocDetail(false);
+    }
+  };
+
+  const handleOpenByFilename = (filename: string) => {
+    const match = documents.find(
+      (d) => d.filename.toLowerCase() === filename.toLowerCase()
+    );
+    if (match) openDocumentInspector(match.id);
+  };
+
+  const handleSummarizeDoc = async () => {
+    if (!inspectedDoc || !token) return;
+    setIsSummarizing(true);
+    setDocError(null);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/documents/${inspectedDoc.id}/summarize`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`Summarization failed (${res.status})`);
+      const data = await res.json();
+      setDocSummary(data.summary);
+    } catch (err: any) {
+      setDocError(err.message || 'Failed to generate summary');
+    } finally {
+      setIsSummarizing(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!inspectedDoc || !token) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/documents/${inspectedDoc.id}/download`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('PDF file unavailable');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = inspectedDoc.filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setDocError(err.message || 'Unable to download PDF');
+    }
+  };
+
+  // Ask Company Brain
   const handleAsk = async (queryText: string) => {
     const trimmed = queryText.trim();
     if (!trimmed || isSubmitting || !token) return;
@@ -132,16 +259,18 @@ export const KnowledgeChatPage: React.FC = () => {
         role: 'assistant',
         content: data.answer || 'No answer generated.',
         citations: data.citations || [],
+        related_documents: data.related_documents || [],
+        has_evidence: data.has_evidence !== false && (data.citations || []).length > 0,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (err: any) {
-      console.error('Knowledge ask error:', err);
       const errorMessage: ChatMessage = {
         id: `err-${Date.now()}`,
         role: 'assistant',
         content: `Error retrieving answer: ${err.message || 'Unable to connect to Knowledge API.'}`,
+        has_evidence: false,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -150,12 +279,6 @@ export const KnowledgeChatPage: React.FC = () => {
     }
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleAsk(inputQuery);
-  };
-
-  // Upload PDF Handler
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!uploadFile || !token) return;
@@ -165,26 +288,19 @@ export const KnowledgeChatPage: React.FC = () => {
 
     const formData = new FormData();
     formData.append('file', uploadFile);
-    if (uploadTitle) {
-      formData.append('title', uploadTitle);
-    }
+    if (uploadTitle) formData.append('title', uploadTitle);
     formData.append('category', uploadCategory);
 
     try {
       const res = await fetch(`${API_BASE_URL}/api/documents/upload`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.detail || `Upload failed with status ${res.status}`);
       }
-
-      // Success: Close modal & refresh document list
       setUploadModalOpen(false);
       setUploadFile(null);
       setUploadTitle('');
@@ -196,7 +312,6 @@ export const KnowledgeChatPage: React.FC = () => {
     }
   };
 
-  // Parse inline citations in AI answers into interactive CitationPopover pills
   const renderMessageContent = (content: string, citations?: Citation[]) => {
     const citationRegex = /\[([^,\n\]]+?),\s*(?:Page|Pg)\s*([0-9]+)\]/g;
     const elements: React.ReactNode[] = [];
@@ -207,24 +322,19 @@ export const KnowledgeChatPage: React.FC = () => {
       const start = match.index;
       const end = citationRegex.lastIndex;
 
-      // Text before citation
       if (start > lastIndex) {
-        elements.push(
-          <span key={`text-${lastIndex}`}>{content.substring(lastIndex, start)}</span>
-        );
+        elements.push(<span key={`text-${lastIndex}`}>{content.substring(lastIndex, start)}</span>);
       }
 
       const rawFilename = match[1].trim();
       const rawPage = parseInt(match[2], 10);
 
-      // Find matching source chunk in returned citations
-      const matching = citations?.find(
-        (c) =>
-          c.filename.toLowerCase().includes(rawFilename.toLowerCase()) &&
-          Number(c.page) === rawPage
-      ) || citations?.find(
-        (c) => c.filename.toLowerCase().includes(rawFilename.toLowerCase())
-      );
+      const matching =
+        citations?.find(
+          (c) =>
+            c.filename.toLowerCase().includes(rawFilename.toLowerCase()) &&
+            Number(c.page) === rawPage
+        ) || citations?.find((c) => c.filename.toLowerCase().includes(rawFilename.toLowerCase()));
 
       elements.push(
         <CitationPopover
@@ -239,9 +349,7 @@ export const KnowledgeChatPage: React.FC = () => {
     }
 
     if (lastIndex < content.length) {
-      elements.push(
-        <span key={`text-${lastIndex}`}>{content.substring(lastIndex)}</span>
-      );
+      elements.push(<span key={`text-${lastIndex}`}>{content.substring(lastIndex)}</span>);
     }
 
     return elements;
@@ -255,155 +363,193 @@ export const KnowledgeChatPage: React.FC = () => {
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
   };
 
+  const filteredDocs = docSearch.trim()
+    ? documents.filter(
+        (d) =>
+          d.title.toLowerCase().includes(docSearch.toLowerCase()) ||
+          d.filename.toLowerCase().includes(docSearch.toLowerCase()) ||
+          d.category.toLowerCase().includes(docSearch.toLowerCase())
+      )
+    : documents;
+
   return (
-    <div className="flex-1 flex flex-col h-screen overflow-hidden bg-canvas text-zinc-900 dark:text-zinc-100 transition-colors">
-      {/* Top Header */}
-      <header className="h-14 border-b border-border px-6 flex items-center justify-between shrink-0 bg-surface">
-        <div className="flex items-center space-x-2.5">
-          <div className="w-7 h-7 rounded-md bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-            <BookOpen size={15} strokeWidth={1.75} />
-          </div>
-          <div>
-            <h1 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-none">
-              Grounded RAG Knowledge Assistant
-            </h1>
-            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono mt-0.5">
-              100% Deterministic Grounding & Click-to-Verify Inline Citations
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-3">
-          <div className="hidden sm:inline-flex items-center space-x-1.5 px-2.5 py-1 rounded bg-subtle border border-border text-xs font-mono text-zinc-500 dark:text-zinc-400">
-            <Database size={12} className="text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
-            <span>ChromaDB:</span>
-            <span className="text-zinc-800 dark:text-zinc-200">./chroma_data</span>
-          </div>
-
-          <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded bg-indigo-500/10 border border-indigo-500/20 text-xs font-mono text-indigo-600 dark:text-indigo-300">
-            <Shield size={12} strokeWidth={1.75} />
+    <div className="flex-1 flex flex-col h-screen overflow-hidden bg-canvas text-text-primary transition-colors">
+      <PageHeader
+        title="Company Brain"
+        subtitle="Organizational knowledge assistant grounded in tenant-isolated company documents"
+        icon={BrainCircuit}
+        badge={
+          <Badge tone="emerald">
+            <Database size={10} />
+            <span>RAG Active</span>
+          </Badge>
+        }
+        actions={
+          <Badge tone="indigo">
+            <Shield size={10} />
             <span>Org #{user?.org_id}</span>
-          </div>
-        </div>
-      </header>
+          </Badge>
+        }
+      />
 
       {/* Main 2-Column Content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Column: Compact Policy Repository Sidebar */}
-        <aside className="w-72 sm:w-80 border-r border-border bg-surface flex flex-col shrink-0">
-          {/* Sidebar Header */}
-          <div className="p-4 border-b border-border flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Layers size={14} className="text-zinc-400 dark:text-zinc-500" strokeWidth={1.75} />
-              <h2 className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 tracking-wide uppercase font-mono">
-                Policy Library
-              </h2>
-              <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-subtle text-zinc-600 dark:text-zinc-400 border border-border tabular-nums">
-                {documents.length}
-              </span>
+        {/* Left Column: Knowledge Library & Search */}
+        <aside className="hidden md:flex w-80 border-r border-border bg-surface flex-col shrink-0">
+          <div className="p-4 border-b border-border space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Layers size={14} className="text-text-muted" strokeWidth={1.75} />
+                <h2 className="text-xs font-semibold text-text-primary tracking-wide uppercase font-mono">
+                  Knowledge Index
+                </h2>
+                <Badge tone="neutral">{documents.length}</Badge>
+              </div>
+
+              {canUpload && (
+                <Button size="sm" onClick={() => setUploadModalOpen(true)}>
+                  <Upload size={12} strokeWidth={2} />
+                  <span>Upload PDF</span>
+                </Button>
+              )}
             </div>
 
-            {/* Upload PDF Button - strictly Admin & HR only */}
-            {canUpload && (
-              <button
-                type="button"
-                onClick={() => setUploadModalOpen(true)}
-                className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-md text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white transition-colors cursor-pointer"
-                title="Upload PDF Policy Document"
-              >
-                <Upload size={12} strokeWidth={2} />
-                <span>Upload PDF</span>
-              </button>
-            )}
+            {/* Search Knowledge Base */}
+            <form onSubmit={handleSearch} className="relative flex items-center">
+              <Search
+                size={13}
+                className="absolute left-2.5 text-text-muted pointer-events-none"
+                strokeWidth={1.75}
+              />
+              <input
+                type="text"
+                value={docSearch}
+                onChange={(e) => setDocSearch(e.target.value)}
+                placeholder="Search policies & excerpts..."
+                className="w-full pl-8 pr-8 py-1.5 bg-canvas border border-border rounded-md text-xs text-text-primary placeholder:text-text-muted/60 focus:outline-none focus:border-indigo-500"
+              />
+              {docSearch && (
+                <button
+                  type="button"
+                  onClick={clearSearch}
+                  className="absolute right-2 text-text-muted hover:text-text-primary cursor-pointer"
+                  aria-label="Clear search"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </form>
           </div>
 
-          {/* Document List */}
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            {isLoadingDocs ? (
-              <div className="py-12 text-center text-xs text-zinc-500 flex flex-col items-center space-y-2">
-                <Loader2 size={16} className="animate-spin text-zinc-400" />
-                <span>Scanning ChromaDB tenant index...</span>
+            {/* Semantic Chunk Search Matches */}
+            {isSearching && (
+              <div className="p-3 text-xs text-text-muted font-mono flex items-center gap-2">
+                <Loader2 size={13} className="animate-spin text-indigo-500" />
+                <span>Searching vector index...</span>
               </div>
-            ) : documents.length === 0 ? (
-              <div className="py-12 px-4 text-center rounded-lg border border-dashed border-border text-xs text-zinc-500">
-                <FileText size={24} className="mx-auto mb-2 text-zinc-400 dark:text-zinc-600" strokeWidth={1.5} />
-                <p className="text-zinc-700 dark:text-zinc-400 font-medium">No documents indexed</p>
-                <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-600">
+            )}
+
+            {searchResults && searchResults.chunks.length > 0 && (
+              <div className="space-y-1.5 pb-2 mb-2 border-b border-border">
+                <div className="text-[10px] font-mono uppercase tracking-wider text-indigo-500 px-1">
+                  Matching Excerpts ({searchResults.chunks.length})
+                </div>
+                {searchResults.chunks.slice(0, 4).map((ch) => (
+                  <button
+                    key={ch.id}
+                    type="button"
+                    onClick={() => handleOpenByFilename(ch.filename)}
+                    className="w-full text-left p-2.5 rounded-lg bg-indigo-500/5 border border-indigo-500/20 hover:border-indigo-500/40 transition-colors space-y-1 cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between text-[10px] font-mono text-indigo-600 dark:text-indigo-400">
+                      <span className="truncate">{ch.filename}</span>
+                      <span>Pg {ch.page}</span>
+                    </div>
+                    <p className="text-[11px] text-text-muted line-clamp-2">{ch.excerpt}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {isLoadingDocs ? (
+              <div className="py-12 text-center text-xs text-text-muted flex flex-col items-center space-y-2">
+                <Loader2 size={16} className="animate-spin text-indigo-500" />
+                <span>Scanning tenant document index...</span>
+              </div>
+            ) : filteredDocs.length === 0 ? (
+              <div className="py-10 px-4 text-center rounded-lg border border-dashed border-border text-xs text-text-muted">
+                <FileText size={22} className="mx-auto mb-2 opacity-60" strokeWidth={1.5} />
+                <p className="text-text-primary font-medium">No matching documents</p>
+                <p className="mt-1 text-[11px]">
                   {canUpload
-                    ? 'Upload a company PDF to enable grounded answers.'
+                    ? 'Upload a company PDF or clear your search filter.'
                     : 'Contact your Admin or HR to upload internal policies.'}
                 </p>
               </div>
             ) : (
-              documents.map((doc) => (
-                <div
+              filteredDocs.map((doc) => (
+                <button
                   key={doc.id}
-                  className="p-3 rounded-lg bg-surface border border-border hover:border-zinc-300 dark:hover:border-white/[0.16] transition-colors group shadow-xs"
+                  type="button"
+                  onClick={() => openDocumentInspector(doc.id)}
+                  className="w-full text-left p-3 rounded-lg bg-canvas border border-border hover:border-indigo-500/40 transition-colors group cursor-pointer"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-2.5 min-w-0">
-                      <div className="w-7 h-7 rounded bg-subtle border border-border flex items-center justify-center shrink-0 text-indigo-600 dark:text-indigo-400 mt-0.5">
-                        <FileText size={14} strokeWidth={1.75} />
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="text-xs font-medium text-zinc-900 dark:text-zinc-100 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors" title={doc.title}>
-                          {doc.title}
-                        </h3>
-                        <p className="text-[11px] font-mono text-zinc-500 truncate" title={doc.filename}>
-                          {doc.filename}
-                        </p>
-                      </div>
+                  <div className="flex items-start space-x-2.5 min-w-0">
+                    <div className="w-7 h-7 rounded bg-surface border border-border flex items-center justify-center shrink-0 text-indigo-500 mt-0.5">
+                      <FileText size={14} strokeWidth={1.75} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-xs font-medium text-text-primary truncate group-hover:text-indigo-500 transition-colors">
+                        {doc.title}
+                      </h3>
+                      <p className="text-[11px] font-mono text-text-muted truncate">
+                        {doc.filename}
+                      </p>
                     </div>
                   </div>
 
-                  <div className="mt-2.5 pt-2 border-t border-border flex items-center justify-between text-[10px] font-mono text-zinc-500 dark:text-zinc-400 tabular-nums">
-                    <span className="px-1.5 py-0.5 rounded bg-subtle text-zinc-600 dark:text-zinc-400 border border-border">
-                      {doc.category}
+                  <div className="mt-2.5 pt-2 border-t border-border flex items-center justify-between text-[10px] font-mono text-text-muted tabular-nums">
+                    <Badge tone="neutral">{doc.category}</Badge>
+                    <span>
+                      {doc.chunk_count} chunks • {formatFileSize(doc.file_size)}
                     </span>
-                    <div className="flex items-center space-x-2 text-zinc-500">
-                      <span>{doc.chunk_count} Chunks</span>
-                      <span>•</span>
-                      <span>{formatFileSize(doc.file_size)}</span>
-                    </div>
                   </div>
-                </div>
+                </button>
               ))
             )}
           </div>
 
-          {/* Left Column Bottom: Multi-tenant ChromaDB Invariant Badge */}
-          <div className="p-3 border-t border-border bg-surface text-[10px] font-mono text-zinc-500 flex items-center justify-between">
+          <div className="p-3 border-t border-border bg-surface text-[10px] font-mono text-text-muted flex items-center justify-between">
             <span className="flex items-center space-x-1.5 truncate">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
-              <span className="truncate">where={`{"org_id": ${user?.org_id}}`}</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              <span className="truncate">Tenant isolated: org_id={user?.org_id}</span>
             </span>
-            <span className="text-zinc-400 dark:text-zinc-600 shrink-0">ChromaDB v0.4+</span>
+            <span>Click doc to inspect</span>
           </div>
         </aside>
 
-        {/* Right Column: Reading-width Q&A Workspace */}
+        {/* Right Column: Conversational Company Brain */}
         <main className="flex-1 flex flex-col overflow-hidden bg-canvas">
-          {/* Scrollable Message Thread */}
           <div className="flex-1 overflow-y-auto p-4 sm:p-6">
             <div className="max-w-3xl mx-auto w-full space-y-6">
               {messages.length === 0 ? (
-                /* Empty State: Linear/Vercel Aesthetic Hero Card */
-                <div className="py-10 px-6 sm:px-8 rounded-xl bg-surface border border-border text-center space-y-5 my-auto shadow-xs">
-                  <div className="w-12 h-12 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto">
-                    <BookOpen size={22} strokeWidth={1.75} />
+                <div className="py-10 px-6 sm:px-8 rounded-xl bg-surface border border-border text-center space-y-5 my-auto">
+                  <div className="w-12 h-12 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 flex items-center justify-center mx-auto">
+                    <BrainCircuit size={22} strokeWidth={1.75} />
                   </div>
                   <div className="max-w-md mx-auto">
-                    <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-                      Company Policy Knowledge Assistant
+                    <h2 className="text-base font-semibold text-text-primary">
+                      Company Brain Knowledge Assistant
                     </h2>
-                    <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-2 leading-relaxed">
-                      Ask questions regarding employee policies, paid leave, remote guidelines, or reimbursement rules. All answers are grounded strictly in uploaded company documents with verifiable citations.
+                    <p className="text-xs text-text-muted mt-2 leading-relaxed">
+                      Ask questions about leave policies, onboarding workflows, HR responsibilities, or remote work guidelines. Answers are strictly grounded in your organization’s verified documents.
                     </p>
                   </div>
 
-                  <div className="pt-2 border-t border-border text-left">
-                    <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-500 block mb-2.5">
-                      Suggested Quick Queries:
+                  <div className="pt-3 border-t border-border text-left">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted block mb-2.5">
+                      Suggested Company Questions
                     </span>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {PROMPT_CHIPS.slice(0, 4).map((chip, idx) => (
@@ -411,52 +557,79 @@ export const KnowledgeChatPage: React.FC = () => {
                           key={idx}
                           type="button"
                           onClick={() => handleAsk(chip.query)}
-                          className="flex items-center justify-between p-2.5 rounded-lg bg-subtle border border-border hover:border-indigo-500/40 hover:bg-indigo-500/5 text-left text-xs transition-colors group cursor-pointer"
+                          className="flex items-center justify-between p-2.5 rounded-lg bg-canvas border border-border hover:border-indigo-500/40 hover:bg-indigo-500/5 text-left text-xs transition-colors group cursor-pointer"
                         >
-                          <span className="font-medium text-zinc-800 dark:text-zinc-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">
+                          <span className="font-medium text-text-primary group-hover:text-indigo-500 transition-colors">
                             {chip.label}
                           </span>
-                          <ArrowRight size={13} className="text-zinc-400 dark:text-zinc-600 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" />
+                          <ArrowRight
+                            size={13}
+                            className="text-text-muted group-hover:text-indigo-500 transition-colors shrink-0"
+                          />
                         </button>
                       ))}
                     </div>
                   </div>
                 </div>
               ) : (
-                /* Chat Messages */
                 messages.map((msg) => (
                   <div
                     key={msg.id}
-                    className={`flex flex-col ${
-                      msg.role === 'user' ? 'items-end' : 'items-start'
-                    }`}
+                    className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
                   >
-                    <div className="flex items-center space-x-2 mb-1 text-[11px] font-mono text-zinc-500">
+                    <div className="flex items-center space-x-2 mb-1 text-[11px] font-mono text-text-muted">
                       <span>{msg.role === 'user' ? 'You' : 'SmartCorp Grounded AI'}</span>
                       <span>•</span>
                       <span>{msg.timestamp}</span>
                     </div>
 
                     <div
-                      className={`rounded-xl p-4 sm:p-5 text-xs leading-relaxed max-w-2xl border shadow-xs ${
+                      className={`rounded-xl p-4 sm:p-5 text-xs leading-relaxed max-w-2xl border ${
                         msg.role === 'user'
-                          ? 'bg-subtle border-border text-zinc-900 dark:text-zinc-100'
-                          : 'bg-surface border-border text-zinc-800 dark:text-zinc-200'
+                          ? 'bg-elevated border-border text-text-primary'
+                          : 'bg-surface border-border text-text-primary'
                       }`}
                     >
                       {msg.role === 'user' ? (
                         <p className="whitespace-pre-wrap">{msg.content}</p>
                       ) : (
                         <div className="space-y-3">
-                          <div className="whitespace-pre-wrap leading-relaxed text-zinc-800 dark:text-zinc-200">
+                          {msg.has_evidence === false && (
+                            <div className="p-2.5 rounded-md bg-amber-500/10 border border-amber-500/25 text-amber-600 dark:text-amber-300 text-[11px] font-mono">
+                              No supporting information found in uploaded company documents.
+                            </div>
+                          )}
+
+                          <div className="whitespace-pre-wrap leading-relaxed text-text-primary">
                             {renderMessageContent(msg.content, msg.citations)}
                           </div>
 
-                          {/* Sources Cited Pill Bar */}
+                          {/* Referenced Documents (Click to Open) */}
+                          {msg.related_documents && msg.related_documents.length > 0 && (
+                            <div className="pt-3 border-t border-border">
+                              <div className="text-[10px] font-mono uppercase tracking-wider text-text-muted mb-1.5">
+                                Referenced Documents
+                              </div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {msg.related_documents.map((rd) => (
+                                  <button
+                                    key={rd.id}
+                                    type="button"
+                                    onClick={() => openDocumentInspector(rd.id)}
+                                    className="inline-flex items-center space-x-1.5 px-2 py-1 rounded-md bg-canvas hover:bg-subtle border border-border text-[11px] font-medium text-text-primary hover:text-indigo-500 transition-colors cursor-pointer"
+                                  >
+                                    <BookOpen size={11} className="text-indigo-500" />
+                                    <span>{rd.title}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
                           {msg.citations && msg.citations.length > 0 && (
-                            <div className="mt-4 pt-3 border-t border-border">
-                              <div className="flex items-center space-x-1.5 text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">
-                                <FileCheck2 size={12} className="text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
+                            <div className="pt-3 border-t border-border">
+                              <div className="flex items-center space-x-1.5 text-[10px] font-mono uppercase tracking-wider text-text-muted mb-2">
+                                <FileCheck2 size={12} className="text-emerald-500" strokeWidth={1.75} />
                                 <span>Verified Source Excerpts ({msg.citations.length})</span>
                               </div>
                               <div className="flex flex-wrap gap-1.5">
@@ -478,17 +651,16 @@ export const KnowledgeChatPage: React.FC = () => {
                 ))
               )}
 
-              {/* In-Flight Query Indicator */}
               {isSubmitting && (
                 <div className="flex flex-col items-start">
-                  <div className="flex items-center space-x-2 mb-1 text-[11px] font-mono text-zinc-500">
+                  <div className="flex items-center space-x-2 mb-1 text-[11px] font-mono text-text-muted">
                     <span>SmartCorp Grounded AI</span>
                     <span>•</span>
-                    <span>Thinking</span>
+                    <span>Searching</span>
                   </div>
-                  <div className="rounded-xl p-4 bg-surface border border-border flex items-center space-x-2.5 text-xs text-zinc-600 dark:text-zinc-400 shadow-xs">
-                    <Loader2 size={14} className="animate-spin text-indigo-600 dark:text-indigo-400" />
-                    <span className="font-mono">Searching ChromaDB tenant chunks & verifying citations...</span>
+                  <div className="rounded-xl p-4 bg-surface border border-border flex items-center space-x-2.5 text-xs text-text-muted">
+                    <Loader2 size={14} className="animate-spin text-indigo-500" />
+                    <span className="font-mono">Retrieving tenant-verified chunks & citations...</span>
                   </div>
                 </div>
               )}
@@ -497,13 +669,12 @@ export const KnowledgeChatPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Bottom Area: Prompt Chips & Clean Input Bar */}
-          <div className="p-4 sm:p-6 border-t border-border bg-surface shrink-0">
+          {/* Input Bar */}
+          <div className="p-4 sm:p-5 border-t border-border bg-surface shrink-0">
             <div className="max-w-3xl mx-auto w-full space-y-2.5">
-              {/* One-Click Prompt Template Chips anchored right above input bar */}
-              <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 scrollbar-none">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 shrink-0 mr-1">
-                  Prompt Chips:
+              <div className="flex items-center space-x-1.5 overflow-x-auto pb-1">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted shrink-0 mr-1">
+                  Quick Ask:
                 </span>
                 {PROMPT_CHIPS.map((chip, idx) => (
                   <button
@@ -511,40 +682,40 @@ export const KnowledgeChatPage: React.FC = () => {
                     type="button"
                     onClick={() => handleAsk(chip.query)}
                     disabled={isSubmitting}
-                    className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-subtle hover:bg-elevated text-zinc-700 dark:text-zinc-300 border border-border hover:border-indigo-500/30 transition-all shrink-0 cursor-pointer disabled:opacity-50"
+                    className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-medium bg-canvas hover:bg-subtle text-text-muted hover:text-text-primary border border-border hover:border-indigo-500/40 transition-colors shrink-0 cursor-pointer disabled:opacity-50"
                   >
-                    <span>{chip.label}</span>
+                    {chip.label}
                   </button>
                 ))}
               </div>
 
-              {/* Form Input */}
-              <form onSubmit={handleFormSubmit} className="relative flex items-center">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleAsk(inputQuery);
+                }}
+                className="relative flex items-center"
+              >
                 <input
                   type="text"
                   value={inputQuery}
                   onChange={(e) => setInputQuery(e.target.value)}
-                  placeholder="Ask a policy question... (e.g., 'How many days of paid sick leave do I get?')"
+                  placeholder="Ask Company Brain anything about policies, onboarding, or HR rules..."
                   disabled={isSubmitting}
-                  className="w-full bg-canvas border border-border focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/40 rounded-lg pl-4 pr-12 py-3 text-xs text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 outline-none transition-all disabled:opacity-50"
+                  className="w-full bg-canvas border border-border focus:border-indigo-500 rounded-lg pl-4 pr-12 py-3 text-xs text-text-primary placeholder:text-text-muted/60 outline-none transition-colors disabled:opacity-50"
                 />
-
                 <button
                   type="submit"
                   disabled={!inputQuery.trim() || isSubmitting}
-                  className="absolute right-2 px-2.5 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-200 dark:disabled:bg-zinc-800 text-white disabled:text-zinc-400 dark:disabled:text-zinc-500 transition-colors cursor-pointer disabled:cursor-not-allowed flex items-center justify-center shadow-xs"
+                  className="absolute right-2 px-2.5 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 disabled:bg-subtle text-white disabled:text-text-muted transition-colors cursor-pointer disabled:cursor-not-allowed flex items-center justify-center"
                   title="Send Question"
                 >
-                  {isSubmitting ? (
-                    <Loader2 size={14} className="animate-spin" />
-                  ) : (
-                    <Send size={14} strokeWidth={2} />
-                  )}
+                  {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} strokeWidth={2} />}
                 </button>
               </form>
 
-              <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500 px-1">
-                <span>Answers restricted strictly to uploaded documents</span>
+              <div className="flex items-center justify-between text-[10px] font-mono text-text-muted px-1">
+                <span>Strictly grounded in uploaded tenant documents</span>
                 <span>Role: {user?.role}</span>
               </div>
             </div>
@@ -552,117 +723,202 @@ export const KnowledgeChatPage: React.FC = () => {
         </main>
       </div>
 
-      {/* Upload PDF Modal (Strictly Admin & HR) */}
-      {uploadModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-xl bg-surface border border-border p-5 shadow-2xl text-xs space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-border">
-              <div className="flex items-center space-x-2">
-                <div className="w-6 h-6 rounded bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-                  <Upload size={13} strokeWidth={2} />
-                </div>
-                <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                  Upload Policy Document
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setUploadModalOpen(false);
-                  setUploadError(null);
-                }}
-                className="p-1 rounded text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
-              >
-                <X size={15} strokeWidth={1.75} />
-              </button>
-            </div>
-
-            {uploadError && (
-              <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs flex items-start space-x-2">
-                <AlertCircle size={14} className="shrink-0 mt-0.5" strokeWidth={1.75} />
-                <span>{uploadError}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleUploadSubmit} className="space-y-3.5">
-              {/* File Select */}
-              <div>
-                <label className="block text-[11px] font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
-                  PDF Document <span className="text-rose-500 dark:text-rose-400">*</span>
-                </label>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept=".pdf"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      setUploadFile(e.target.files[0]);
-                      if (!uploadTitle) {
-                        setUploadTitle(
-                          e.target.files[0].name.replace('.pdf', '').replace(/_/g, ' ')
-                        );
-                      }
-                    }
-                  }}
-                  className="w-full text-xs text-zinc-600 dark:text-zinc-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-zinc-100 dark:file:bg-white/[0.08] file:text-zinc-700 dark:file:text-zinc-200 hover:file:bg-zinc-200 dark:hover:file:bg-white/[0.12] file:cursor-pointer cursor-pointer bg-canvas rounded-lg p-2 border border-border"
-                  required
-                />
-              </div>
-
-              {/* Title */}
-              <div>
-                <label className="block text-[11px] font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
-                  Document Title (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={uploadTitle}
-                  onChange={(e) => setUploadTitle(e.target.value)}
-                  placeholder="e.g., Annual Travel & Expense Policy"
-                  className="w-full bg-canvas border border-border focus:border-indigo-500/50 rounded-lg px-3 py-2 text-xs text-zinc-900 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 outline-none"
-                />
-              </div>
-
-              {/* Category */}
-              <div>
-                <label className="block text-[11px] font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
-                  Category
-                </label>
-                <select
-                  value={uploadCategory}
-                  onChange={(e) => setUploadCategory(e.target.value)}
-                  className="w-full bg-canvas border border-border focus:border-indigo-500/50 rounded-lg px-3 py-2 text-xs text-zinc-800 dark:text-zinc-200 outline-none"
-                >
-                  <option value="HR & People Ops">HR & People Ops</option>
-                  <option value="Operations">Operations</option>
-                  <option value="IT & Security">IT & Security</option>
-                  <option value="Legal & Compliance">Legal & Compliance</option>
-                  <option value="General Policy">General Policy</option>
-                </select>
-              </div>
-
-              <div className="pt-2 flex items-center justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setUploadModalOpen(false)}
-                  disabled={isUploading}
-                  className="px-3 py-1.5 rounded-lg border border-border hover:bg-subtle text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!uploadFile || isUploading}
-                  className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-200 dark:disabled:bg-zinc-800 text-white disabled:text-zinc-400 dark:disabled:text-zinc-500 font-medium transition-colors cursor-pointer flex items-center space-x-1.5 shadow-xs"
-                >
-                  {isUploading && <Loader2 size={13} className="animate-spin" />}
-                  <span>{isUploading ? 'Indexing Chunks...' : 'Ingest & Index'}</span>
-                </button>
-              </div>
-            </form>
+      {/* Document Inspector & Summarizer Modal */}
+      <Modal
+        open={isLoadingDocDetail || !!inspectedDoc || !!docError}
+        onClose={() => {
+          setInspectedDoc(null);
+          setDocError(null);
+          setDocSummary(null);
+        }}
+        title={inspectedDoc?.title || 'Document Inspector'}
+        subtitle={inspectedDoc ? `${inspectedDoc.filename} • ${inspectedDoc.category}` : undefined}
+        icon={BookOpen}
+        maxWidth="max-w-2xl"
+      >
+        {isLoadingDocDetail ? (
+          <div className="py-12 flex items-center justify-center space-x-2 text-xs font-mono text-text-muted">
+            <Loader2 size={16} className="animate-spin text-indigo-500" />
+            <span>Loading document pages...</span>
           </div>
-        </div>
-      )}
+        ) : docError ? (
+          <ErrorBanner message={docError} />
+        ) : (
+          inspectedDoc && (
+            <div className="space-y-4 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-border">
+                <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono text-text-muted">
+                  <Badge tone="neutral">{inspectedDoc.chunk_count} chunks</Badge>
+                  <Badge tone="neutral">{formatFileSize(inspectedDoc.file_size)}</Badge>
+                  <span>Uploaded by {inspectedDoc.uploader_name}</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    isLoading={isSummarizing}
+                    onClick={handleSummarizeDoc}
+                  >
+                    <AlignLeft size={12} className="text-indigo-500" />
+                    <span>Summarize</span>
+                  </Button>
+                  {inspectedDoc.has_pdf_file && (
+                    <Button variant="primary" size="sm" onClick={handleDownloadPdf}>
+                      <Download size={12} />
+                      <span>Download PDF</span>
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {docSummary && (
+                <div className="p-3.5 rounded-lg bg-indigo-500/5 border border-indigo-500/25 space-y-1.5">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-indigo-500 font-semibold">
+                    AI Document Summary
+                  </div>
+                  <div className="text-xs text-text-primary whitespace-pre-wrap leading-relaxed">
+                    {docSummary}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-3 max-h-[45vh] overflow-y-auto pr-1">
+                {inspectedDoc.pages.length === 0 ? (
+                  <div className="text-xs text-text-muted py-6 text-center">
+                    No extracted text pages available.
+                  </div>
+                ) : (
+                  inspectedDoc.pages.map((p) => (
+                    <div
+                      key={p.page}
+                      className="p-3.5 rounded-lg bg-canvas border border-border space-y-1.5"
+                    >
+                      <div className="text-[10px] font-mono uppercase text-text-muted">
+                        Page {p.page}
+                      </div>
+                      <p className="text-xs text-text-primary whitespace-pre-wrap leading-relaxed">
+                        {p.content}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {inspectedDoc.related_documents.length > 0 && (
+                <div className="pt-3 border-t border-border">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-text-muted mb-2">
+                    Related Knowledge Documents
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {inspectedDoc.related_documents.map((rd) => (
+                      <button
+                        key={rd.id}
+                        type="button"
+                        onClick={() => openDocumentInspector(rd.id)}
+                        className="px-2.5 py-1 rounded-md bg-subtle hover:bg-elevated border border-border text-[11px] font-medium text-text-primary cursor-pointer"
+                      >
+                        {rd.title}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        )}
+      </Modal>
+
+      {/* Upload PDF Modal */}
+      <Modal
+        open={uploadModalOpen}
+        onClose={() => {
+          setUploadModalOpen(false);
+          setUploadError(null);
+        }}
+        title="Upload Policy Document"
+        subtitle="PDFs are chunked and indexed strictly within your organization"
+        icon={Upload}
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleUploadSubmit} className="space-y-4 text-xs">
+          {uploadError && (
+            <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs flex items-start space-x-2">
+              <AlertCircle size={14} className="shrink-0 mt-0.5" />
+              <span>{uploadError}</span>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-[11px] font-medium text-text-primary mb-1.5">
+              PDF Document <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept=".pdf"
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  setUploadFile(e.target.files[0]);
+                  if (!uploadTitle) {
+                    setUploadTitle(e.target.files[0].name.replace('.pdf', '').replace(/_/g, ' '));
+                  }
+                }
+              }}
+              className="w-full text-xs text-text-muted file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-elevated file:text-text-primary file:cursor-pointer cursor-pointer bg-canvas rounded-lg p-2 border border-border"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-medium text-text-primary mb-1.5">
+              Document Title (Optional)
+            </label>
+            <input
+              type="text"
+              value={uploadTitle}
+              onChange={(e) => setUploadTitle(e.target.value)}
+              placeholder="e.g., Annual Travel & Expense Policy"
+              className="w-full bg-canvas border border-border focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-text-primary outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-medium text-text-primary mb-1.5">
+              Category
+            </label>
+            <select
+              value={uploadCategory}
+              onChange={(e) => setUploadCategory(e.target.value)}
+              className="w-full bg-canvas border border-border focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-text-primary outline-none"
+            >
+              <option value="HR & People Ops">HR & People Ops</option>
+              <option value="Operations">Operations</option>
+              <option value="IT & Security">IT & Security</option>
+              <option value="Legal & Compliance">Legal & Compliance</option>
+              <option value="General Policy">General Policy</option>
+            </select>
+          </div>
+
+          <div className="pt-2 flex items-center justify-end space-x-2">
+            <Button
+              variant="secondary"
+              onClick={() => setUploadModalOpen(false)}
+              disabled={isUploading}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={!uploadFile || isUploading}
+              isLoading={isUploading}
+            >
+              {isUploading ? 'Indexing Chunks...' : 'Ingest & Index'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

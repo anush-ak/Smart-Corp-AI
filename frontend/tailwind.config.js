@@ -11,10 +11,12 @@ export default {
     extend: {
       colors: {
         canvas: 'var(--canvas)',
+        sidebar: 'var(--sidebar)',
         surface: 'var(--surface)',
         elevated: 'var(--elevated)',
         subtle: 'var(--subtle)',
         border: 'var(--border)',
+        primary: 'var(--primary)',
         'text-primary': 'var(--text-primary)',
         'text-muted': 'var(--text-muted)',
         brand: {
@@ -23,10 +25,11 @@ export default {
         },
         semantic: {
           indigo: '#6366F1',
+          sky: '#38BDF8',
           emerald: '#10B981',
           amber: '#F59E0B',
           rose: '#F43F5E',
-        }
+        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
